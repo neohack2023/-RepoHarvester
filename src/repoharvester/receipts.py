@@ -47,12 +47,14 @@ def build_extraction_receipt(
     """Build a deterministic receipt for records from exactly one repository revision."""
     materialized = list(records)
     if not materialized:
-        raise ValueError("extraction receipts require at least one harvest record")
+        message = "extraction receipts require at least one harvest record"
+        raise ValueError(message)
 
     repositories = {record.source_repository for record in materialized}
     revisions = {record.source_revision for record in materialized}
     if len(repositories) != 1 or len(revisions) != 1:
-        raise ValueError("extraction receipts require exactly one source repository and revision")
+        message = "extraction receipts require exactly one source repository and revision"
+        raise ValueError(message)
 
     tag_rulesets = tuple(
         sorted({record.tag_ruleset for record in materialized if record.tag_ruleset is not None})
@@ -117,21 +119,20 @@ def load_extraction_receipt(path: str | Path) -> ExtractionReceipt:
 
 
 def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
-    entries = []
-    for record in records:
-        entries.append(
-            {
-                "source_repository": record.source_repository,
-                "source_revision": record.source_revision,
-                "path": record.path,
-                "unit_kind": record.unit_kind,
-                "source_sha256": record.source_sha256,
-                "representation_sha256": record.representation_sha256,
-                "tags": sorted(set(record.tags)),
-                "tag_ruleset": record.tag_ruleset,
-                "qualification_state": record.qualification_state.value,
-            }
-        )
+    entries = [
+        {
+            "source_repository": record.source_repository,
+            "source_revision": record.source_revision,
+            "path": record.path,
+            "unit_kind": record.unit_kind,
+            "source_sha256": record.source_sha256,
+            "representation_sha256": record.representation_sha256,
+            "tags": sorted(set(record.tags)),
+            "tag_ruleset": record.tag_ruleset,
+            "qualification_state": record.qualification_state.value,
+        }
+        for record in records
+    ]
     entries.sort(
         key=lambda item: (
             item["source_repository"],
