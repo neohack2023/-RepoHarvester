@@ -128,3 +128,42 @@
   per-file reuse rights or promoting any record. Prefer exact license-file evidence and normalized identifiers only when
   the source supports them deterministically; preserve unknown/ambiguous cases explicitly.
 - Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
+
+## Checkpoint 5 — deterministic repository license evidence
+
+- Date: 2026-09-11
+- Merged main head: `d38ecd0859d4576dd00ffb5180791b8589a6fba7`.
+- Acceptance target: `anthonylee991/pcm` at exact revision
+  `5dfb7ecca889dd8c12b8d088a1cbf91e4f8d1cf8`.
+- Maturity: repository-level license documents can now enter the same provenance-backed evidence spine as other harvested
+  units without implying that every file inherits the repository license or changing any qualification state.
+- Discovery boundary: only conventional root-level license filenames are admitted by `repository-license-v1`; nested,
+  vendored, README, or arbitrary license-like files are not treated as repository-license evidence in this slice.
+- Evidence shape: each admitted license document becomes a distinct RAW `evidence:repository-license` harvest record that
+  preserves exact repository, revision, path, source SHA-256, representation SHA-256, and exact decoded license text.
+- Normalization: canonical MIT text is deterministically tagged `license:spdx:MIT`. Unsupported, custom, incomplete, or
+  ambiguous text is retained as exact evidence and tagged `license:spdx:UNKNOWN` rather than being guessed.
+- Storage: the existing SQLite v3 record spine is reused deliberately; no new table or schema migration was required.
+  Exact provenance/unit-kind/tag queries and the existing extraction-receipt manifest bind the license evidence.
+- Acceptance evidence: pinned PCM acceptance produced 44 file records + 87 TypeScript symbol records + 1 repository-license
+  evidence record = 132 total records. SQLite stored/reloaded all 132 exactly. The license record came from root `LICENSE`,
+  retained exact text, carried `license:spdx:MIT`, remained `RAW`, and the source checkout stayed clean.
+- Relationship evidence: the existing 123 relationships were unchanged: 87 `contains` and 36 `imports`, with 87 `EXACT`,
+  20 `UNRESOLVED`, and 16 `EXTERNAL` resolution states.
+- Evidence binding: receipt manifest SHA-256
+  `ffd3bdf8573c7a21a7a23fbcac505117479a86c72741706c6d605bad0606dc4a`.
+  Relationship manifest SHA-256 remained
+  `6b98e2dcd04ec09a117e7a22ba16b0b0cebd0feb672173a0b3de0faff0cc1ce7`.
+- Validation: pinned `External Acceptance`, CodeQL, conventional-commit validation, and container build passed. On Python
+  3.8 and Python 3.13, all RepoHarvester product tests including license evidence passed; the broad matrix still reported
+  only the same five inherited live-network query-parser failures involving Bitbucket authentication and Alpine GitLab 418.
+- Existing repository warning: Dependency Review remains non-executable because the repository does not currently expose
+  the required dependency-graph/security-analysis capability.
+- Qualification: CHECKPOINT 5 REACHED. License evidence remains RAW evidence. No per-file reuse right, legal conclusion,
+  compatibility conclusion, or promotion to reusable knowledge is inferred from the repository-level license document.
+- Known limits: root conventional filenames only; canonical MIT normalization only; no fuzzy matching, SPDX header scan,
+  nested/vendor interpretation, per-file license attribution, package metadata licensing, network lookup, or legal advice.
+- Next gate: `DEPENDENCY_EVIDENCE_01` — deterministically capture declared dependency evidence from a concrete manifest
+  format justified by the pinned target, preserve exact manifest provenance, avoid package-registry/network resolution,
+  and keep all resulting evidence RAW.
+- Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
