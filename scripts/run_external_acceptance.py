@@ -15,6 +15,7 @@ from repoharvester import (
     QualificationState,
     build_extraction_receipt,
     build_file_harvest_records,
+    build_typescript_relationships,
     build_typescript_symbol_records,
     verify_extraction_receipt,
     write_extraction_receipt,
@@ -25,13 +26,7 @@ DEFAULT_IGNORES = {".git", "*.pyc", "__pycache__", "node_modules"}
 
 
 def _git(*args: str, cwd: Path | None = None) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    completed = subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
     return completed.stdout.strip()
 
 
@@ -46,13 +41,7 @@ def _checkout_exact_revision(repository_url: str, revision: str, destination: Pa
 
 
 def _record_identity(record) -> tuple[str, str, str, str, str]:
-    return (
-        record.source_repository,
-        record.source_revision,
-        record.path,
-        record.unit_kind,
-        record.unit_identity,
-    )
+    return (record.source_repository, record.source_revision, record.path, record.unit_kind, record.unit_identity)
 
 
 def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Path) -> dict[str, object]:
@@ -63,81 +52,55 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         _checkout_exact_revision(repository_url, revision, checkout)
         status_before = _git("status", "--porcelain", cwd=checkout)
 
-        query = IngestionQuery(
-            local_path=checkout,
-            url=repository_url,
-            slug=slug,
-            id=uuid4(),
-            commit=revision,
-            ignore_patterns=DEFAULT_IGNORES,
-        )
+        query = IngestionQuery(local_path=checkout, url=repository_url, slug=slug, id=uuid4(), commit=revision, ignore_patterns=DEFAULT_IGNORES)
         file_records = build_file_harvest_records(query)
-        if not file_records:
-            raise RuntimeError("acceptance harvest produced zero file records")
-
-        symbol_records = [
-            symbol
-            for file_record in file_records
-            for symbol in build_typescript_symbol_records(file_record)
-        ]
-        if not symbol_records:
-            raise RuntimeError("TypeScript symbol acceptance produced zero code-unit records")
+        symbol_records = [symbol for file_record in file_records for symbol in build_typescript_symbol_records(file_record)]
         records = [*file_records, *symbol_records]
+        relationships = build_typescript_relationships(records)
 
+        if not file_records or not symbol_records or not relationships:
+            raise RuntimeError("acceptance harvest produced incomplete record/relationship evidence")
         if {record.source_revision for record in records} != {revision}:
             raise RuntimeError("harvest records do not bind exclusively to the pinned revision")
         if {record.qualification_state for record in records} != {QualificationState.RAW}:
             raise RuntimeError("acceptance harvest promoted records beyond RAW")
-        if any(record.start_byte is None or record.end_byte is None for record in symbol_records):
-            raise RuntimeError("symbol records are missing exact source spans")
-        if any(not record.unit_identity for record in symbol_records):
-            raise RuntimeError("symbol records are missing stable unit identities")
 
         database_path = output_dir / "harvest.sqlite3"
         if database_path.exists():
             database_path.unlink()
         store = SQLiteHarvestStore(database_path)
         stored_count = store.upsert_records(records)
+        stored_relationship_count = store.upsert_relationships(relationships)
         reloaded = store.query_records(source_repository=repository_url, source_revision=revision)
+        reloaded_relationships = store.query_relationships(source_repository=repository_url, source_revision=revision)
         if stored_count != len(records) or len(reloaded) != len(records):
-            raise RuntimeError("SQLite round-trip record count mismatch")
+            raise RuntimeError("SQLite record round-trip mismatch")
+        if stored_relationship_count != len(relationships) or reloaded_relationships != relationships:
+            raise RuntimeError("SQLite relationship round-trip mismatch")
         if sorted(map(_record_identity, reloaded)) != sorted(map(_record_identity, records)):
             raise RuntimeError("SQLite exact-query identities differ from harvested identities")
 
-        symbol_names = {record.symbol_name for record in symbol_records}
-        known_symbol = next((name for name in sorted(symbol_names) if name), None)
-        if known_symbol is None:
-            raise RuntimeError("symbol acceptance produced no named symbols")
-        exact_symbol_query = store.query_records(
-            source_repository=repository_url,
-            source_revision=revision,
-            symbol_name=known_symbol,
-        )
-        if not exact_symbol_query or any(record.symbol_name != known_symbol for record in exact_symbol_query):
-            raise RuntimeError("SQLite exact symbol query failed")
+        imports = store.query_relationships(source_repository=repository_url, source_revision=revision, relationship_kind="imports")
+        contains = store.query_relationships(source_repository=repository_url, source_revision=revision, relationship_kind="contains")
+        if not imports or not contains:
+            raise RuntimeError("relationship acceptance requires both imports and containment evidence")
 
         receipt = build_extraction_receipt(
             reloaded,
+            relationships=reloaded_relationships,
             warnings=(),
-            next_gate="TypeScript code-unit extraction proven; evaluate next language or qualification slice",
+            next_gate="TypeScript relationships proven; begin receipt-schema validation or license evidence slice",
         )
-        if not verify_extraction_receipt(receipt, reloaded):
-            raise RuntimeError("extraction receipt failed reproduction verification")
-        receipt_path = output_dir / "EXTRACTION_RECEIPT.json"
-        write_extraction_receipt(receipt_path, receipt)
+        if not verify_extraction_receipt(receipt, reloaded, relationships=reloaded_relationships):
+            raise RuntimeError("extraction receipt failed relationship reproduction verification")
+        write_extraction_receipt(output_dir / "EXTRACTION_RECEIPT.json", receipt)
 
         status_after = _git("status", "--porcelain", cwd=checkout)
         if status_before != status_after or status_after:
             raise RuntimeError("harvest mutated the external source checkout")
 
-        languages = Counter(record.language or "Unknown" for record in records)
-        role_tags = Counter(
-            tag
-            for record in records
-            for tag in record.tags
-            if tag.startswith("role:")
-        )
-        symbol_kinds = Counter(record.unit_kind for record in symbol_records)
+        relationship_kinds = Counter(item.relationship_kind for item in relationships)
+        resolution_states = Counter(item.resolution_state.value for item in relationships)
         summary = {
             "source_repository": repository_url,
             "source_revision": revision,
@@ -145,21 +108,18 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             "symbol_record_count": len(symbol_records),
             "record_count": len(records),
             "database_record_count": len(reloaded),
+            "relationship_count": len(relationships),
+            "database_relationship_count": len(reloaded_relationships),
+            "relationship_kinds": dict(sorted(relationship_kinds.items())),
+            "resolution_states": dict(sorted(resolution_states.items())),
             "qualification_states": sorted({record.qualification_state.value for record in records}),
-            "tag_rulesets": sorted({record.tag_ruleset for record in records if record.tag_ruleset}),
-            "languages": dict(sorted(languages.items())),
-            "roles": dict(sorted(role_tags.items())),
-            "symbol_kinds": dict(sorted(symbol_kinds.items())),
-            "exact_symbol_query_example": known_symbol,
             "manifest_sha256": receipt.manifest_sha256,
+            "relationship_manifest_sha256": receipt.relationship_manifest_sha256,
             "source_worktree_clean": True,
             "receipt_verified": True,
-            "typescript_symbol_gate": "PASS",
+            "typescript_relationship_gate": "PASS",
         }
-        (output_dir / "ACCEPTANCE_SUMMARY.json").write_text(
-            json.dumps(summary, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        (output_dir / "ACCEPTANCE_SUMMARY.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return summary
 
 
@@ -170,8 +130,7 @@ def main() -> None:
     parser.add_argument("--slug", required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
-    summary = run_acceptance(args.repository_url, args.revision, args.slug, args.output_dir)
-    print(json.dumps(summary, indent=2, sort_keys=True))
+    print(json.dumps(run_acceptance(args.repository_url, args.revision, args.slug, args.output_dir), indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
