@@ -29,7 +29,7 @@ Use explicit states where applicable:
 
 Terminal/lineage states may include `REJECTED` and `SUPERSEDED`.
 
-State transitions must eventually be backed by explicit evidence and admission rules. Storage or extraction operations must not infer promotion by themselves.
+State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, and relationship-discovery operations must not infer promotion by themselves.
 
 ## Provenance requirements
 
@@ -71,12 +71,17 @@ Feature-specific agent contracts live under `features/<feature>/AGENTS.md` and o
 Current feature cells:
 
 - `features/storage/` — SQLite persistence and exact deterministic retrieval
-- `features/code-units/` — deterministic symbol/code-unit extraction frontier
+- `features/code-units/` — deterministic TypeScript code-unit extraction, checkpointed at Checkpoint 2
+- `features/relationships/` — next bounded frontier for deterministic parent/child and import evidence
 
 ## Current frontier
 
-Checkpoint 1 proved one external repository can be ingested, represented as provenance-backed RAW file records, deterministically tagged, stored in SQLite, exactly queried, reproduced, and accompanied by an extraction receipt without modifying the source repository.
+Checkpoint 1 proved deterministic external file-level harvesting with provenance, tags, SQLite, exact retrieval, and receipts.
 
-The next bounded frontier is `CODE_UNIT_EXTRACTION_01` under `features/code-units/`.
+Checkpoint 2 proved deterministic TypeScript code-unit harvesting at exact source locations, SQLite schema v2 migration/query behavior, receipt v2 evidence, and pinned PCM acceptance. The supported unit set is top-level functions, classes, interfaces, type aliases, enums, and variable declarators. All harvested units remain `RAW`.
 
-Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification as part of that slice.
+The next bounded frontier is `RELATIONSHIPS_01` under `features/relationships/`: add evidence-backed parent/child containment and import relationships for already-supported TypeScript units before widening language coverage.
+
+Nearby follow-up research/implementation priorities remain receipt schema validation, license evidence, dependency evidence expansion, and explicit qualification gates.
+
+Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification as part of the current frontier.
