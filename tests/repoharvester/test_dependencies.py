@@ -40,9 +40,9 @@ def test_root_package_json_emits_runtime_and_development_dependency_evidence() -
     records = build_declared_dependency_records([manifest])
 
     assert [(record.symbol_name, record.representation) for record in records] == [
-        ("@types/node", "^20.14.0"),
         ("kuzu", "^0.11.3"),
         ("zod", "^3.23.0"),
+        ("@types/node", "^20.14.0"),
     ]
     runtime = next(record for record in records if record.symbol_name == "kuzu")
     development = next(record for record in records if record.symbol_name == "@types/node")
