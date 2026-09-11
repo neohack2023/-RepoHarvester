@@ -15,14 +15,24 @@ from repoharvester import (
 def _file(path: str, source: str) -> HarvestRecord:
     digest = hashlib.sha256(source.encode()).hexdigest()
     return HarvestRecord(
-        source_repository="repo", source_revision="a" * 40, path=path,
-        unit_kind="file", language="TypeScript", source_sha256=digest,
-        representation_sha256=digest, representation=source,
+        source_repository="repo",
+        source_revision="a" * 40,
+        path=path,
+        unit_kind="file",
+        language="TypeScript",
+        source_sha256=digest,
+        representation_sha256=digest,
+        representation=source,
     )
 
 
 def test_builds_contains_and_import_edges_deterministically() -> None:
-    a = _file("src/a.ts", "import { b } from './b';\nimport React from 'react';\nexport function a() { return b; }\n")
+    a = _file(
+        "src/a.ts",
+        "import { b } from './b';\n"
+        "import React from 'react';\n"
+        "export function a() { return b; }\n",
+    )
     b = _file("src/b.ts", "export function b() { return 1; }\n")
     records = [a, b, *build_typescript_symbol_records(a), *build_typescript_symbol_records(b)]
 
@@ -32,8 +42,8 @@ def test_builds_contains_and_import_edges_deterministically() -> None:
     assert forward == reverse
     imports = [item for item in forward if item.relationship_kind == "imports"]
     assert [(item.literal_target, item.resolution_state, item.target_path) for item in imports] == [
-        ("'./b'", ResolutionState.EXACT, "src/b.ts"),
         ("'react'", ResolutionState.EXTERNAL, ""),
+        ("'./b'", ResolutionState.EXACT, "src/b.ts"),
     ]
     contains = [item for item in forward if item.relationship_kind == "contains"]
     assert len(contains) == 2
