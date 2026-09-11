@@ -29,7 +29,7 @@ Use explicit states where applicable:
 
 Terminal/lineage states may include `REJECTED` and `SUPERSEDED`.
 
-State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, and relationship-discovery operations must not infer promotion by themselves.
+State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, receipt validation, and relationship-discovery operations must not infer promotion by themselves.
 
 ## Provenance requirements
 
@@ -72,16 +72,21 @@ Current feature cells:
 
 - `features/storage/` — SQLite persistence and exact deterministic retrieval
 - `features/code-units/` — deterministic TypeScript code-unit extraction, checkpointed at Checkpoint 2
-- `features/relationships/` — next bounded frontier for deterministic parent/child and import evidence
+- `features/relationships/` — deterministic TypeScript containment/import evidence, checkpointed at Checkpoint 3
+- extraction receipts — fail-closed serialized version/shape validation, checkpointed at Checkpoint 4
 
 ## Current frontier
 
 Checkpoint 1 proved deterministic external file-level harvesting with provenance, tags, SQLite, exact retrieval, and receipts.
 
-Checkpoint 2 proved deterministic TypeScript code-unit harvesting at exact source locations, SQLite schema v2 migration/query behavior, receipt v2 evidence, and pinned PCM acceptance. The supported unit set is top-level functions, classes, interfaces, type aliases, enums, and variable declarators. All harvested units remain `RAW`.
+Checkpoint 2 proved deterministic TypeScript code-unit harvesting at exact source locations, SQLite schema v2 migration/query behavior, receipt v2 evidence, and pinned PCM acceptance.
 
-The next bounded frontier is `RELATIONSHIPS_01` under `features/relationships/`: add evidence-backed parent/child containment and import relationships for already-supported TypeScript units before widening language coverage.
+Checkpoint 3 proved deterministic TypeScript `contains` and `imports` relationships, SQLite schema v3 persistence/query behavior, receipt v3 relationship binding, and pinned PCM acceptance. All harvested records and relationships remain evidence only; nothing was promoted beyond `RAW`.
 
-Nearby follow-up research/implementation priorities remain receipt schema validation, license evidence, dependency evidence expansion, and explicit qualification gates.
+Checkpoint 4 hardened serialized extraction-receipt admission with explicit supported versions and fail-closed validation while preserving the Python 3.8 support floor.
+
+The next bounded frontier is `LICENSE_EVIDENCE_01`: attach deterministic, provenance-backed repository license evidence without inferring per-file reuse rights or changing qualification state. Prefer exact license-file evidence and normalized identifiers only when supported deterministically by source evidence. Preserve unknown and ambiguous cases explicitly.
+
+Follow-up priorities after license evidence are dependency evidence expansion, explicit qualification gates, and cross-repository comparison. A second language should be added only when a concrete target requires it.
 
 Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification as part of the current frontier.
