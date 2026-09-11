@@ -10,6 +10,7 @@ from repoharvester.receipts import (
     write_extraction_receipt,
 )
 from repoharvester.records import build_file_harvest_records
+from repoharvester.symbols import build_typescript_symbol_records
 
 __all__ = [
     "ExtractionReceipt",
@@ -18,6 +19,7 @@ __all__ = [
     "build_evidence_tree",
     "build_extraction_receipt",
     "build_file_harvest_records",
+    "build_typescript_symbol_records",
     "load_extraction_receipt",
     "verify_extraction_receipt",
     "write_extraction_receipt",

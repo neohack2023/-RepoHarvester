@@ -1,0 +1,43 @@
+name: TypeScript Symbol Acceptance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  typescript-symbols:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v6.0.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install RepoHarvester with TypeScript symbol support
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[dev,typescript-symbols]'
+      - name: Run focused symbol and storage tests
+        run: |
+          pytest -q \
+            tests/repoharvester/test_symbols.py \
+            tests/repoharvester/storage/test_symbol_records.py \
+            tests/repoharvester/test_receipts.py
+      - name: Run pinned PCM symbol acceptance gate
+        run: |
+          python scripts/run_typescript_symbol_acceptance.py \
+            --repository-url https://github.com/anthonylee991/pcm.git \
+            --revision 5dfb7ecca889dd8c12b8d088a1cbf91e4f8d1cf8 \
+            --slug anthonylee991/pcm \
+            --output-dir acceptance/pcm-typescript-symbols
+      - name: Upload symbol acceptance evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v4.6.2
+        with:
+          name: pcm-typescript-symbol-evidence
+          path: acceptance/pcm-typescript-symbols/
+          if-no-files-found: error

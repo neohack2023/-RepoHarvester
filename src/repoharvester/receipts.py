@@ -11,7 +11,8 @@ from typing import Iterable
 from repoharvester.models import HarvestRecord
 from repoharvester.storage import SCHEMA_VERSION
 
-RECEIPT_VERSION = "repoharvester-extraction-v1"
+RECEIPT_VERSION = "repoharvester-extraction-v2"
+LEGACY_RECEIPT_VERSION = "repoharvester-extraction-v1"
 RECEIPT_OPERATION = "harvest-store"
 DEFAULT_NEXT_GATE = "external-repository acceptance run"
 
@@ -43,6 +44,7 @@ def build_extraction_receipt(
     warnings: Iterable[str] = (),
     next_gate: str = DEFAULT_NEXT_GATE,
     database_schema_version: int = SCHEMA_VERSION,
+    receipt_version: str = RECEIPT_VERSION,
 ) -> ExtractionReceipt:
     """Build a deterministic receipt for records from exactly one repository revision."""
     materialized = list(records)
@@ -55,6 +57,9 @@ def build_extraction_receipt(
     if len(repositories) != 1 or len(revisions) != 1:
         message = "extraction receipts require exactly one source repository and revision"
         raise ValueError(message)
+    if receipt_version not in {RECEIPT_VERSION, LEGACY_RECEIPT_VERSION}:
+        message = f"unsupported extraction receipt version: {receipt_version}"
+        raise ValueError(message)
 
     tag_rulesets = tuple(
         sorted({record.tag_ruleset for record in materialized if record.tag_ruleset is not None})
@@ -63,12 +68,12 @@ def build_extraction_receipt(
         sorted({record.qualification_state.value for record in materialized})
     )
     return ExtractionReceipt(
-        receipt_version=RECEIPT_VERSION,
+        receipt_version=receipt_version,
         operation=RECEIPT_OPERATION,
         source_repository=next(iter(repositories)),
         source_revision=next(iter(revisions)),
         record_count=len(materialized),
-        manifest_sha256=_manifest_sha256(materialized),
+        manifest_sha256=_manifest_sha256(materialized, receipt_version=receipt_version),
         tag_rulesets=tag_rulesets,
         qualification_states=qualification_states,
         database_schema_version=database_schema_version,
@@ -85,6 +90,7 @@ def verify_extraction_receipt(receipt: ExtractionReceipt, records: Iterable[Harv
             warnings=receipt.warnings,
             next_gate=receipt.next_gate,
             database_schema_version=receipt.database_schema_version,
+            receipt_version=receipt.receipt_version,
         )
     except ValueError:
         return False
@@ -118,28 +124,44 @@ def load_extraction_receipt(path: str | Path) -> ExtractionReceipt:
     )
 
 
-def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
-    entries = [
-        {
-            "source_repository": record.source_repository,
-            "source_revision": record.source_revision,
-            "path": record.path,
-            "unit_kind": record.unit_kind,
-            "source_sha256": record.source_sha256,
-            "representation_sha256": record.representation_sha256,
-            "tags": sorted(set(record.tags)),
-            "tag_ruleset": record.tag_ruleset,
-            "qualification_state": record.qualification_state.value,
-        }
-        for record in records
-    ]
+def _manifest_sha256(records: Iterable[HarvestRecord], *, receipt_version: str) -> str:
+    entries = [_manifest_entry(record, receipt_version=receipt_version) for record in records]
     entries.sort(
         key=lambda item: (
             item["source_repository"],
             item["source_revision"],
             item["path"],
             item["unit_kind"],
+            item.get("unit_identity", ""),
         )
     )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
+
+
+def _manifest_entry(record: HarvestRecord, *, receipt_version: str) -> dict[str, object]:
+    entry: dict[str, object] = {
+        "source_repository": record.source_repository,
+        "source_revision": record.source_revision,
+        "path": record.path,
+        "unit_kind": record.unit_kind,
+        "source_sha256": record.source_sha256,
+        "representation_sha256": record.representation_sha256,
+        "tags": sorted(set(record.tags)),
+        "tag_ruleset": record.tag_ruleset,
+        "qualification_state": record.qualification_state.value,
+    }
+    if receipt_version == RECEIPT_VERSION:
+        entry.update(
+            {
+                "unit_identity": record.unit_identity,
+                "symbol_name": record.symbol_name,
+                "start_byte": record.start_byte,
+                "end_byte": record.end_byte,
+                "start_line": record.start_line,
+                "start_column": record.start_column,
+                "end_line": record.end_line,
+                "end_column": record.end_column,
+            }
+        )
+    return entry

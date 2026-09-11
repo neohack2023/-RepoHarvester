@@ -44,6 +44,10 @@ dev = [
     "pytest-mock",
 ]
 
+typescript-symbols = [
+    "tree-sitter-typescript[core]==0.23.2; python_version >= '3.9'",
+]
+
 server = [
     "boto3>=1.28.0",  # AWS SDK for S3 support
     "fastapi[standard]>=0.109.1",  # Minimum safe release (https://osv.dev/vulnerability/PYSEC-2024-38)
