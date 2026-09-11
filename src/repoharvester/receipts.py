@@ -11,7 +11,7 @@ from typing import Iterable
 from repoharvester.models import HarvestRecord
 from repoharvester.storage import SCHEMA_VERSION
 
-RECEIPT_VERSION = "repoharvester-extraction-v1"
+RECEIPT_VERSION = "repoharvester-extraction-v2"
 RECEIPT_OPERATION = "harvest-store"
 DEFAULT_NEXT_GATE = "external-repository acceptance run"
 
@@ -125,8 +125,16 @@ def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
             "source_revision": record.source_revision,
             "path": record.path,
             "unit_kind": record.unit_kind,
+            "unit_identity": record.unit_identity,
+            "symbol_name": record.symbol_name,
             "source_sha256": record.source_sha256,
             "representation_sha256": record.representation_sha256,
+            "start_byte": record.start_byte,
+            "end_byte": record.end_byte,
+            "start_row": record.start_row,
+            "start_column": record.start_column,
+            "end_row": record.end_row,
+            "end_column": record.end_column,
             "tags": sorted(set(record.tags)),
             "tag_ruleset": record.tag_ruleset,
             "qualification_state": record.qualification_state.value,
@@ -139,6 +147,7 @@ def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
             item["source_revision"],
             item["path"],
             item["unit_kind"],
+            item["unit_identity"],
         )
     )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
