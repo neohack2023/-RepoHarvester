@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 
 import pytest
@@ -146,8 +147,13 @@ def test_candidate_gate_blocks_missing_validation_reference() -> None:
 def test_candidate_gate_blocks_non_reproducible_receipt() -> None:
     records = _records()
     receipt = build_extraction_receipt(records, next_gate="QUALIFICATION_GATE_01")
+    changed_representation = "^9.9.9"
     changed_records = list(records)
-    changed_records[2] = replace(changed_records[2], representation="^9.9.9")
+    changed_records[2] = replace(
+        changed_records[2],
+        representation=changed_representation,
+        representation_sha256=hashlib.sha256(changed_representation.encode("utf-8")).hexdigest(),
+    )
 
     decision = evaluate_raw_to_candidate(
         changed_records[0],
