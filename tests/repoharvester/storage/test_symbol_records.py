@@ -20,7 +20,7 @@ def _symbol(identity: str, name: str, start: int, end: int) -> HarvestRecord:
         representation_sha256="2" * 64,
         representation=f"function {name}() {{}}",
         qualification_state=QualificationState.RAW,
-        tags=("unit:symbol", "symbol:function"),
+        tags=("symbol:function", "unit:symbol"),
         tag_ruleset="path-baseline-v1+typescript-symbol-v1",
         start_byte=start,
         end_byte=end,
