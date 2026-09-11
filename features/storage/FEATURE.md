@@ -6,7 +6,7 @@ RepoHarvester needs a compact local persistence and exact retrieval layer for pr
 
 ## Current maturity
 
-The feature now supports deterministic SQLite persistence plus exact structured queries. It does not add semantic search, ranking, vectors, distributed infrastructure, or automatic qualification.
+The feature now supports deterministic SQLite persistence, exact structured queries, and compact extraction receipts that bind stored records back to one exact repository revision. It does not add semantic search, ranking, vectors, distributed infrastructure, or automatic qualification.
 
 ## Inputs
 
@@ -20,6 +20,7 @@ The feature now supports deterministic SQLite persistence plus exact structured 
 - Stable identity keyed by repository, revision, path, and unit kind.
 - Lossless reconstruction of persisted `HarvestRecord` values.
 - Deterministically ordered exact query results over provenance, path/unit fields, language, qualification state, and required tags.
+- Canonical extraction receipts containing repository/revision, record count, manifest hash, tag rulesets, qualification states, schema version, warnings, and next gate.
 
 ## Non-goals
 
@@ -37,11 +38,12 @@ The feature now supports deterministic SQLite persistence plus exact structured 
 - Tag normalization to unique sorted rows.
 - Exact reconstruction of stored record values.
 - AND-filtered exact provenance and tag retrieval.
+- Canonical manifest hashing and receipt verification.
 
 ## Validation gate
 
-The query slice is acceptable when focused tests prove exact provenance filtering, exact field filtering, all-requested-tag semantics, combined provenance/tag filtering, deterministic ordering, and empty results where exact constraints cannot all be satisfied.
+This storage/evidence slice is acceptable when focused tests prove lossless persistence, idempotent identity semantics, exact retrieval, deterministic ordering, receipt order independence, manifest drift detection, receipt file round-trip, and successful reproduction against records loaded back from SQLite.
 
 ## Next bounded slice
 
-Emit compact extraction receipts that bind an ingest/store operation to repository revision, record identities/counts, ruleset, database schema version, warnings, and a reproducibility verification gate.
+Run one real external repository through the complete ingest -> record -> tag -> store -> query -> receipt path at an exact revision, capture the resulting evidence, and repair only defects demonstrated by that acceptance run.
