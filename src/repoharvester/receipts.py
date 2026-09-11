@@ -270,7 +270,7 @@ def _int_value(payload: Mapping[str, object], field: str) -> int:
 
 
 def _string_array_value(payload: Mapping[str, object], field: str) -> list[str]:
-    return list(cast(list[str], payload[field]))
+    return [cast(str, item) for item in cast(list, payload[field])]
 
 
 def _optional_int_value(payload: Mapping[str, object], field: str, default: int) -> int:
@@ -282,7 +282,7 @@ def _optional_string_value(payload: Mapping[str, object], field: str, default: s
 
 
 def _optional_string_array(payload: Mapping[str, object], field: str) -> list[str]:
-    return list(cast(list[str], payload.get(field, [])))
+    return [cast(str, item) for item in cast(list, payload.get(field, []))]
 
 
 def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
