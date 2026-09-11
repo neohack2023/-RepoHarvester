@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 
 def _collect_paths(node: FileSystemNode) -> set[str]:
-    """Collect repository-relative paths from a structured evidence tree."""
-    paths = {node.path_str}
+    """Collect repository-relative paths using the portable comparison form."""
+    paths = {node.path_str.replace("\\", "/")}
     for child in node.children:
         paths.update(_collect_paths(child))
     return paths

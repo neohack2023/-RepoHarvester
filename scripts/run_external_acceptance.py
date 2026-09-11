@@ -13,6 +13,7 @@ from uuid import uuid4
 from gitingest.schemas import IngestionQuery
 from repoharvester import (
     QualificationState,
+    build_declared_dependency_records,
     build_extraction_receipt,
     build_file_harvest_records,
     build_repository_license_records,
@@ -53,15 +54,27 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         _checkout_exact_revision(repository_url, revision, checkout)
         status_before = _git("status", "--porcelain", cwd=checkout)
 
-        query = IngestionQuery(local_path=checkout, url=repository_url, slug=slug, id=uuid4(), commit=revision, ignore_patterns=DEFAULT_IGNORES)
+        query = IngestionQuery(
+            local_path=checkout,
+            url=repository_url,
+            slug=slug,
+            id=uuid4(),
+            commit=revision,
+            ignore_patterns=DEFAULT_IGNORES,
+        )
         file_records = build_file_harvest_records(query)
-        symbol_records = [symbol for file_record in file_records for symbol in build_typescript_symbol_records(file_record)]
+        symbol_records = [
+            symbol
+            for file_record in file_records
+            for symbol in build_typescript_symbol_records(file_record)
+        ]
         license_records = build_repository_license_records(file_records)
-        records = [*file_records, *symbol_records, *license_records]
+        dependency_records = build_declared_dependency_records(file_records)
+        records = [*file_records, *symbol_records, *license_records, *dependency_records]
         relationships = build_typescript_relationships(records)
 
-        if not file_records or not symbol_records or not relationships or not license_records:
-            raise RuntimeError("acceptance harvest produced incomplete record/relationship/license evidence")
+        if not file_records or not symbol_records or not relationships or not license_records or not dependency_records:
+            raise RuntimeError("acceptance harvest produced incomplete deterministic evidence")
         if {record.source_revision for record in records} != {revision}:
             raise RuntimeError("harvest records do not bind exclusively to the pinned revision")
         if {record.qualification_state for record in records} != {QualificationState.RAW}:
@@ -74,7 +87,10 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         stored_count = store.upsert_records(records)
         stored_relationship_count = store.upsert_relationships(relationships)
         reloaded = store.query_records(source_repository=repository_url, source_revision=revision)
-        reloaded_relationships = store.query_relationships(source_repository=repository_url, source_revision=revision)
+        reloaded_relationships = store.query_relationships(
+            source_repository=repository_url,
+            source_revision=revision,
+        )
         if stored_count != len(records) or len(reloaded) != len(records):
             raise RuntimeError("SQLite record round-trip mismatch")
         if stored_relationship_count != len(relationships) or reloaded_relationships != relationships:
@@ -82,8 +98,16 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         if sorted(map(_record_identity, reloaded)) != sorted(map(_record_identity, records)):
             raise RuntimeError("SQLite exact-query identities differ from harvested identities")
 
-        imports = store.query_relationships(source_repository=repository_url, source_revision=revision, relationship_kind="imports")
-        contains = store.query_relationships(source_repository=repository_url, source_revision=revision, relationship_kind="contains")
+        imports = store.query_relationships(
+            source_repository=repository_url,
+            source_revision=revision,
+            relationship_kind="imports",
+        )
+        contains = store.query_relationships(
+            source_repository=repository_url,
+            source_revision=revision,
+            relationship_kind="contains",
+        )
         if not imports or not contains:
             raise RuntimeError("relationship acceptance requires both imports and containment evidence")
 
@@ -98,14 +122,39 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         if stored_license_evidence[0].representation != license_records[0].representation:
             raise RuntimeError("stored license evidence changed the exact license representation")
 
+        stored_dependencies = store.query_records(
+            source_repository=repository_url,
+            source_revision=revision,
+            unit_kind="evidence:declared-dependency",
+            tags=("evidence:declared-dependency",),
+        )
+        expected_dependencies = {
+            ("kuzu", "^0.11.3", "runtime"),
+            ("typescript", "^5.6.0", "runtime"),
+            ("zod", "^3.23.0", "runtime"),
+            ("@types/node", "^20.14.0", "development"),
+            ("mem0ai", "^3.1.8", "development"),
+            ("@getzep/zep-cloud", "^2.0.2", "development"),
+        }
+        actual_dependencies = {
+            (
+                record.symbol_name,
+                record.representation,
+                "development" if "dependency:scope:development" in record.tags else "runtime",
+            )
+            for record in stored_dependencies
+        }
+        if actual_dependencies != expected_dependencies:
+            raise RuntimeError("declared dependency evidence does not match pinned package.json")
+
         receipt = build_extraction_receipt(
             reloaded,
             relationships=reloaded_relationships,
             warnings=(),
-            next_gate="Repository license evidence proven; begin dependency evidence slice",
+            next_gate="Declared dependency evidence proven; begin qualification-gate planning",
         )
         if not verify_extraction_receipt(receipt, reloaded, relationships=reloaded_relationships):
-            raise RuntimeError("extraction receipt failed license-aware reproduction verification")
+            raise RuntimeError("extraction receipt failed dependency-aware reproduction verification")
         write_extraction_receipt(output_dir / "EXTRACTION_RECEIPT.json", receipt)
 
         status_after = _git("status", "--porcelain", cwd=checkout)
@@ -120,6 +169,10 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             for tag in record.tags
             if tag.startswith("license:spdx:")
         )
+        dependency_scopes = Counter(
+            "development" if "dependency:scope:development" in record.tags else "runtime"
+            for record in dependency_records
+        )
         summary = {
             "source_repository": repository_url,
             "source_revision": revision,
@@ -127,6 +180,8 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             "symbol_record_count": len(symbol_records),
             "license_evidence_record_count": len(license_records),
             "license_spdx_tags": license_spdx_tags,
+            "dependency_evidence_record_count": len(dependency_records),
+            "dependency_scopes": dict(sorted(dependency_scopes.items())),
             "record_count": len(records),
             "database_record_count": len(reloaded),
             "relationship_count": len(relationships),
@@ -140,8 +195,12 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             "receipt_verified": True,
             "typescript_relationship_gate": "PASS",
             "repository_license_gate": "PASS",
+            "declared_dependency_gate": "PASS",
         }
-        (output_dir / "ACCEPTANCE_SUMMARY.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        (output_dir / "ACCEPTANCE_SUMMARY.json").write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         return summary
 
 
@@ -152,7 +211,13 @@ def main() -> None:
     parser.add_argument("--slug", required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
-    print(json.dumps(run_acceptance(args.repository_url, args.revision, args.slug, args.output_dir), indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            run_acceptance(args.repository_url, args.revision, args.slug, args.output_dir),
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":

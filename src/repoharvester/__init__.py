@@ -1,5 +1,10 @@
 """RepoHarvester evidence and knowledge-layer primitives."""
 
+from repoharvester.dependencies import (
+    DEPENDENCY_EVIDENCE_RULESET,
+    DependencyEvidenceError,
+    build_declared_dependency_records,
+)
 from repoharvester.evidence import build_evidence_tree
 from repoharvester.licenses import LICENSE_EVIDENCE_RULESET, build_repository_license_records
 from repoharvester.models import (
@@ -23,6 +28,8 @@ from repoharvester.relationships import (
 from repoharvester.symbols import TYPESCRIPT_SYMBOL_RULESET, build_typescript_symbol_records
 
 __all__ = [
+    "DEPENDENCY_EVIDENCE_RULESET",
+    "DependencyEvidenceError",
     "ExtractionReceipt",
     "HarvestRecord",
     "HarvestRelationship",
@@ -31,6 +38,7 @@ __all__ = [
     "ResolutionState",
     "TYPESCRIPT_RELATIONSHIP_RULESET",
     "TYPESCRIPT_SYMBOL_RULESET",
+    "build_declared_dependency_records",
     "build_evidence_tree",
     "build_extraction_receipt",
     "build_file_harvest_records",
