@@ -20,7 +20,7 @@ class QualificationState(str, Enum):
 
 @dataclass(frozen=True)
 class HarvestRecord:
-    """One provenance-backed harvested file unit."""
+    """One provenance-backed harvested file or code-unit record."""
 
     source_repository: str
     source_revision: str
@@ -33,3 +33,11 @@ class HarvestRecord:
     qualification_state: QualificationState = QualificationState.RAW
     tags: tuple[str, ...] = ()
     tag_ruleset: str | None = None
+    unit_identity: str = ""
+    symbol_name: str | None = None
+    start_byte: int | None = None
+    end_byte: int | None = None
+    start_row: int | None = None
+    start_column: int | None = None
+    end_row: int | None = None
+    end_column: int | None = None
