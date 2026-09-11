@@ -6,7 +6,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Mapping, cast
 
 from repoharvester.models import HarvestRecord, HarvestRelationship
 from repoharvester.storage import SCHEMA_VERSION
@@ -14,6 +14,41 @@ from repoharvester.storage import SCHEMA_VERSION
 RECEIPT_VERSION = "repoharvester-extraction-v3"
 RECEIPT_OPERATION = "harvest-store"
 DEFAULT_NEXT_GATE = "external-repository acceptance run"
+SUPPORTED_RECEIPT_VERSIONS = frozenset(
+    {
+        "repoharvester-extraction-v1",
+        "repoharvester-extraction-v2",
+        RECEIPT_VERSION,
+    }
+)
+
+_BASE_RECEIPT_FIELDS = frozenset(
+    {
+        "receipt_version",
+        "operation",
+        "source_repository",
+        "source_revision",
+        "record_count",
+        "manifest_sha256",
+        "tag_rulesets",
+        "qualification_states",
+        "database_schema_version",
+        "warnings",
+        "next_gate",
+    }
+)
+_RELATIONSHIP_RECEIPT_FIELDS = frozenset(
+    {
+        "relationship_count",
+        "relationship_manifest_sha256",
+        "relationship_kinds",
+        "resolution_states",
+    }
+)
+
+
+class ReceiptValidationError(ValueError):
+    """Raised when serialized receipt evidence does not match a supported contract."""
 
 
 @dataclass(frozen=True)
@@ -89,6 +124,8 @@ def verify_extraction_receipt(
     *,
     relationships: Iterable[HarvestRelationship] = (),
 ) -> bool:
+    if receipt.receipt_version != RECEIPT_VERSION or receipt.operation != RECEIPT_OPERATION:
+        return False
     try:
         reproduced = build_extraction_receipt(
             records,
@@ -106,25 +143,146 @@ def write_extraction_receipt(path: str | Path, receipt: ExtractionReceipt) -> No
     Path(path).write_text(json.dumps(receipt.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def validate_extraction_receipt_payload(payload: object) -> Mapping[str, object]:
+    """Validate one serialized receipt payload before constructing trusted receipt evidence.
+
+    Versions 1 and 2 remain loadable for inspection, but only the current version can pass
+    ``verify_extraction_receipt`` because reproduction uses the current evidence contract.
+    """
+    if not isinstance(payload, dict):
+        raise ReceiptValidationError("extraction receipt must be a JSON object")
+
+    version = payload.get("receipt_version")
+    if not isinstance(version, str) or version not in SUPPORTED_RECEIPT_VERSIONS:
+        raise ReceiptValidationError(f"unsupported receipt_version: {version!r}")
+
+    expected_fields = _BASE_RECEIPT_FIELDS
+    if version == RECEIPT_VERSION:
+        expected_fields = expected_fields | _RELATIONSHIP_RECEIPT_FIELDS
+
+    actual_fields = frozenset(payload)
+    missing = sorted(expected_fields - actual_fields)
+    extra = sorted(actual_fields - expected_fields)
+    if missing:
+        raise ReceiptValidationError(f"receipt is missing required fields: {', '.join(missing)}")
+    if extra:
+        raise ReceiptValidationError(f"receipt contains unsupported fields: {', '.join(extra)}")
+
+    _require_exact_string(payload, "operation", RECEIPT_OPERATION)
+    _require_non_empty_string(payload, "source_repository")
+    _require_non_empty_string(payload, "source_revision")
+    _require_non_negative_int(payload, "record_count")
+    _require_sha256(payload, "manifest_sha256")
+    _require_positive_int(payload, "database_schema_version")
+    _require_string_array(payload, "tag_rulesets")
+    _require_string_array(payload, "qualification_states")
+    _require_string_array(payload, "warnings")
+    _require_non_empty_string(payload, "next_gate")
+
+    if version == RECEIPT_VERSION:
+        _require_non_negative_int(payload, "relationship_count")
+        _require_sha256(payload, "relationship_manifest_sha256")
+        _require_string_array(payload, "relationship_kinds")
+        _require_string_array(payload, "resolution_states")
+
+    return payload
+
+
 def load_extraction_receipt(path: str | Path) -> ExtractionReceipt:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ReceiptValidationError(f"unable to read extraction receipt: {exc}") from exc
+
+    validated = validate_extraction_receipt_payload(payload)
+    version = cast(str, validated["receipt_version"])
+
+    empty_relationship_manifest = _relationship_manifest_sha256([])
     return ExtractionReceipt(
-        receipt_version=payload["receipt_version"],
-        operation=payload["operation"],
-        source_repository=payload["source_repository"],
-        source_revision=payload["source_revision"],
-        record_count=payload["record_count"],
-        manifest_sha256=payload["manifest_sha256"],
-        relationship_count=payload.get("relationship_count", 0),
-        relationship_manifest_sha256=payload.get("relationship_manifest_sha256", _relationship_manifest_sha256([])),
-        relationship_kinds=tuple(payload.get("relationship_kinds", ())),
-        resolution_states=tuple(payload.get("resolution_states", ())),
-        tag_rulesets=tuple(payload["tag_rulesets"]),
-        qualification_states=tuple(payload["qualification_states"]),
-        database_schema_version=payload["database_schema_version"],
-        warnings=tuple(payload["warnings"]),
-        next_gate=payload["next_gate"],
+        receipt_version=version,
+        operation=_string_value(validated, "operation"),
+        source_repository=_string_value(validated, "source_repository"),
+        source_revision=_string_value(validated, "source_revision"),
+        record_count=_int_value(validated, "record_count"),
+        manifest_sha256=_string_value(validated, "manifest_sha256"),
+        relationship_count=_optional_int_value(validated, "relationship_count", 0),
+        relationship_manifest_sha256=_optional_string_value(
+            validated,
+            "relationship_manifest_sha256",
+            empty_relationship_manifest,
+        ),
+        relationship_kinds=tuple(_optional_string_array(validated, "relationship_kinds")),
+        resolution_states=tuple(_optional_string_array(validated, "resolution_states")),
+        tag_rulesets=tuple(_string_array_value(validated, "tag_rulesets")),
+        qualification_states=tuple(_string_array_value(validated, "qualification_states")),
+        database_schema_version=_int_value(validated, "database_schema_version"),
+        warnings=tuple(_string_array_value(validated, "warnings")),
+        next_gate=_string_value(validated, "next_gate"),
     )
+
+
+def _require_exact_string(payload: Mapping[str, object], field: str, expected: str) -> None:
+    value = payload.get(field)
+    if value != expected or not isinstance(value, str):
+        raise ReceiptValidationError(f"{field} must equal {expected!r}")
+
+
+def _require_non_empty_string(payload: Mapping[str, object], field: str) -> None:
+    value = payload.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise ReceiptValidationError(f"{field} must be a non-empty string")
+
+
+def _require_non_negative_int(payload: Mapping[str, object], field: str) -> None:
+    value = payload.get(field)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ReceiptValidationError(f"{field} must be a non-negative integer")
+
+
+def _require_positive_int(payload: Mapping[str, object], field: str) -> None:
+    value = payload.get(field)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise ReceiptValidationError(f"{field} must be a positive integer")
+
+
+def _require_sha256(payload: Mapping[str, object], field: str) -> None:
+    value = payload.get(field)
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(char not in "0123456789abcdef" for char in value)
+    ):
+        raise ReceiptValidationError(f"{field} must be a lowercase SHA-256 hex digest")
+
+
+def _require_string_array(payload: Mapping[str, object], field: str) -> None:
+    value = payload.get(field)
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ReceiptValidationError(f"{field} must be an array of strings")
+
+
+def _string_value(payload: Mapping[str, object], field: str) -> str:
+    return cast(str, payload[field])
+
+
+def _int_value(payload: Mapping[str, object], field: str) -> int:
+    return cast(int, payload[field])
+
+
+def _string_array_value(payload: Mapping[str, object], field: str) -> list[str]:
+    return [cast(str, item) for item in cast(list, payload[field])]
+
+
+def _optional_int_value(payload: Mapping[str, object], field: str, default: int) -> int:
+    return cast(int, payload.get(field, default))
+
+
+def _optional_string_value(payload: Mapping[str, object], field: str, default: str) -> str:
+    return cast(str, payload.get(field, default))
+
+
+def _optional_string_array(payload: Mapping[str, object], field: str) -> list[str]:
+    return [cast(str, item) for item in cast(list, payload.get(field, []))]
 
 
 def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
@@ -150,7 +308,15 @@ def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
         }
         for record in records
     ]
-    entries.sort(key=lambda item: (item["source_repository"], item["source_revision"], item["path"], item["unit_kind"], item["unit_identity"]))
+    entries.sort(
+        key=lambda item: (
+            item["source_repository"],
+            item["source_revision"],
+            item["path"],
+            item["unit_kind"],
+            item["unit_identity"],
+        )
+    )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
 
@@ -180,11 +346,20 @@ def _relationship_manifest_sha256(relationships: Iterable[HarvestRelationship]) 
         }
         for item in relationships
     ]
-    entries.sort(key=lambda item: (
-        item["source_repository"], item["source_revision"], item["source_path"], item["source_unit_kind"],
-        item["source_unit_identity"], item["relationship_kind"], item["target_path"],
-        item["target_unit_identity"], item["literal_target"], item["start_byte"] if item["start_byte"] is not None else -1,
-        item["end_byte"] if item["end_byte"] is not None else -1,
-    ))
+    entries.sort(
+        key=lambda item: (
+            item["source_repository"],
+            item["source_revision"],
+            item["source_path"],
+            item["source_unit_kind"],
+            item["source_unit_identity"],
+            item["relationship_kind"],
+            item["target_path"],
+            item["target_unit_identity"],
+            item["literal_target"],
+            item["start_byte"] if item["start_byte"] is not None else -1,
+            item["end_byte"] if item["end_byte"] is not None else -1,
+        )
+    )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
