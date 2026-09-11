@@ -38,7 +38,9 @@ def test_receipt_is_order_independent_and_binds_manifest() -> None:
 
     forward = build_extraction_receipt([first, second])
     reverse = build_extraction_receipt([second, first])
-    changed = build_extraction_receipt([first, _record("src/b.py", tags=("language:Python", "role:test"))])
+    changed = build_extraction_receipt(
+        [first, _record("src/b.py", tags=("language:Python", "role:test"))]
+    )
 
     assert forward == reverse
     assert forward.manifest_sha256 != changed.manifest_sha256
@@ -51,7 +53,9 @@ def test_receipt_rejects_empty_or_mixed_provenance() -> None:
         build_extraction_receipt([])
 
     with pytest.raises(ValueError, match="exactly one source repository and revision"):
-        build_extraction_receipt([_record("a.py"), _record("b.py", source_revision="b" * 40)])
+        build_extraction_receipt(
+            [_record("a.py"), _record("b.py", source_revision="b" * 40)]
+        )
 
 
 def test_receipt_round_trip_verifies_records_loaded_from_sqlite(tmp_path) -> None:
