@@ -94,3 +94,37 @@
   widening license/dependency evidence. Keep schema validation deterministic and backward-aware for supported receipt
   versions; do not add semantic ranking, vectors, graph infrastructure, or automatic qualification.
 - Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
+
+## Checkpoint 4 — fail-closed extraction receipt validation
+
+- Date: 2026-09-11
+- Merged main head: `32c516815d6bd6f86c1f7cf77955ad2e91679bb2`.
+- Maturity: serialized extraction receipts are now validated against explicit supported version contracts before an
+  `ExtractionReceipt` object is constructed or trusted by downstream code.
+- Supported serialized versions: `repoharvester-extraction-v1`, `repoharvester-extraction-v2`, and current
+  `repoharvester-extraction-v3`. Historical v1/v2 receipts remain loadable for inspection, while current reproduction
+  verification requires the current v3 evidence contract.
+- Fail-closed behavior: unknown versions, missing required fields, unsupported extra fields, malformed JSON, wrong JSON
+  types, malformed lowercase SHA-256 digests, invalid counts/schema versions, and wrong operation identifiers raise
+  `ReceiptValidationError` rather than being silently coerced into receipt evidence.
+- Compatibility evidence: the first implementation exposed a real Python 3.8 runtime incompatibility from evaluating
+  `list[str]` inside `typing.cast`. The CI matrix caught the defect before merge; the deserialization helpers were repaired
+  to preserve the repository's Python 3.8 support floor, and the receipt validation/loading tests then passed on Python 3.8.
+- Focused validation: the new receipt-validation suite exercises current round-trip verification, version rejection,
+  hash/type/count/operation failures, missing/extra fields, malformed/non-object JSON, and backward v2 inspection behavior.
+- Acceptance evidence: pinned PCM `External Acceptance` remained green after the receipt boundary hardened, preserving
+  Checkpoint 3's 131 records, 123 deterministic relationships, clean source worktree, and relationship manifest SHA-256
+  `6b98e2dcd04ec09a117e7a22ba16b0b0cebd0feb672173a0b3de0faff0cc1ce7`.
+- Validation: CodeQL and conventional-commit validation passed on the accepted head. On both Python 3.8 and Python 3.13,
+  the RepoHarvester receipt tests passed; the only observed broad-CI test failures were the already-documented five inherited
+  live-network query-parser cases involving Bitbucket authentication behavior and Alpine GitLab HTTP 418 responses.
+- Existing repository warning: Dependency Review remains non-executable because the repository does not currently expose
+  the required dependency-graph/security-analysis capability.
+- Qualification: CHECKPOINT 4 REACHED. Receipt validation hardens evidence admission only; no harvested records or
+  relationships changed lifecycle state, and no external code was promoted to reusable knowledge.
+- Known limits: validation is an explicit in-code serialized contract rather than a standalone JSON Schema artifact;
+  historical receipts are supported for inspection but are not silently upgraded or accepted as current reproduction proof.
+- Next gate: `LICENSE_EVIDENCE_01` — attach deterministic, provenance-backed repository license evidence without inferring
+  per-file reuse rights or promoting any record. Prefer exact license-file evidence and normalized identifiers only when
+  the source supports them deterministically; preserve unknown/ambiguous cases explicitly.
+- Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
