@@ -31,3 +31,5 @@ class HarvestRecord:
     representation_sha256: str
     representation: str
     qualification_state: QualificationState = QualificationState.RAW
+    tags: tuple[str, ...] = ()
+    tag_ruleset: str | None = None

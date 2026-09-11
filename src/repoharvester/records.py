@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
 from gitingest.schemas import FileSystemNode, FileSystemNodeType
@@ -11,42 +10,12 @@ from gitingest.schemas import FileSystemNode, FileSystemNodeType
 from repoharvester.evidence import build_evidence_tree
 from repoharvester.models import HarvestRecord
 from repoharvester.provenance import resolve_checked_out_revision
+from repoharvester.tags import BASELINE_TAG_RULESET, baseline_tags, language_for_path
 
 if TYPE_CHECKING:
     from gitingest.schemas import IngestionQuery
 
 
-_LANGUAGE_BY_SUFFIX = {
-    ".c": "C",
-    ".cc": "C++",
-    ".cpp": "C++",
-    ".cs": "C#",
-    ".css": "CSS",
-    ".go": "Go",
-    ".h": "C",
-    ".hpp": "C++",
-    ".html": "HTML",
-    ".java": "Java",
-    ".js": "JavaScript",
-    ".json": "JSON",
-    ".jsx": "JavaScript",
-    ".kt": "Kotlin",
-    ".kts": "Kotlin",
-    ".md": "Markdown",
-    ".php": "PHP",
-    ".ps1": "PowerShell",
-    ".py": "Python",
-    ".rb": "Ruby",
-    ".rs": "Rust",
-    ".sh": "Shell",
-    ".sql": "SQL",
-    ".swift": "Swift",
-    ".toml": "TOML",
-    ".ts": "TypeScript",
-    ".tsx": "TypeScript",
-    ".yaml": "YAML",
-    ".yml": "YAML",
-}
 
 
 def build_file_harvest_records(query: IngestionQuery) -> list[HarvestRecord]:
@@ -79,7 +48,9 @@ def _record_from_node(node: FileSystemNode, *, source_repository: str, source_re
         source_revision=source_revision,
         path=node.path_str.replace("\\", "/"),
         unit_kind="file",
-        language=_LANGUAGE_BY_SUFFIX.get(Path(node.path_str).suffix.lower()),
+        language=language_for_path(node.path_str),
+        tags=baseline_tags(node.path_str),
+        tag_ruleset=BASELINE_TAG_RULESET,
         source_sha256=hashlib.sha256(source_bytes).hexdigest(),
         representation_sha256=hashlib.sha256(representation.encode("utf-8")).hexdigest(),
         representation=representation,

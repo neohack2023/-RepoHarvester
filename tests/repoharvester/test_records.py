@@ -63,3 +63,18 @@ def test_file_harvest_records_require_git_provenance(
 
     with pytest.raises(ValueError, match="resolvable Git HEAD"):
         build_file_harvest_records(sample_query)
+
+
+def test_tags_do_not_promote_or_mutate_evidence(temp_directory, sample_query):
+    """Repeated extraction retains provenance, hashes, source bytes and RAW state."""
+    _commit_fixture(temp_directory)
+    sample_query.local_path = temp_directory
+    before = (temp_directory / 'src/subfile2.py').read_bytes()
+    first = build_file_harvest_records(sample_query)
+    second = build_file_harvest_records(sample_query)
+    assert first == second
+    record = next(record for record in first if record.path == 'src/subfile2.py')
+    assert record.tags == ('language:Python', 'path-component:src', 'role:source')
+    assert record.tag_ruleset == 'path-baseline-v1'
+    assert record.qualification_state == QualificationState.RAW
+    assert (temp_directory / 'src/subfile2.py').read_bytes() == before
