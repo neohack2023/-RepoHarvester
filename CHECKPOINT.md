@@ -1,32 +1,36 @@
-# SQLite persistence, exact retrieval, and receipt checkpoint
+# First external repository acceptance checkpoint
 
 - Date: 2026-09-11
 - Repository: neohack2023/-RepoHarvester
-- Verified main/base before slice 3: 01e7b99748f0ec84ec98b2b3d01bbe6d8f6f74f2
-- Prior merged slice heads: a11b1b5e06307c2e58d3e41fead1bfb245c1d373 (SQLite persistence),
-  01e7b99748f0ec84ec98b2b3d01bbe6d8f6f74f2 (exact retrieval).
+- Verified main/base before acceptance: ad4525d62064610f76b3ba2cfb6408f32284f052.
+- Acceptance target: `anthonylee991/pcm` at exact revision
+  `5dfb7ecca889dd8c12b8d088a1cbf91e4f8d1cf8`.
 - Checkpoint head: the commit containing this file (resolve with Git; avoids self-referential SHA).
-- Maturity: provenance-backed RAW file records with deterministic baseline tags, local SQLite persistence,
-  exact structured retrieval, and deterministic extraction receipts with reproducibility verification.
-- Completed: versioned SQLite schema; idempotent upsert by repository/revision/path/unit kind; lossless record
-  reconstruction; exact AND-filtered provenance/field/tag queries; deterministic result ordering; canonical
-  receipt manifest hashing; receipt JSON round-trip; verification against records loaded back from SQLite;
-  bounded storage feature contract under `features/storage/`.
-- Evidence: isolated deterministic checks passed for SQLite round-trip/upsert/schema versioning, exact query
-  semantics, receipt order independence, manifest drift detection, SQLite-to-receipt reproduction, and receipt
-  verification failure on changed record evidence. `python -m compileall` passed for the isolated slice harness.
-- CI status: GitHub Actions did not attach pull-request workflow runs to the first two slice PR heads after
-  repeated checks, so no CI pass is claimed here. The previous baseline-tags checkpoint recorded 29 focused
-  RepoHarvester tests passing before these storage slices.
-- Warnings: full upstream test suite and repository pre-commit suite have not been run for these three slices.
-- Blockers: none in the implemented storage/query/receipt primitives.
-- Risks: schema migration behavior beyond SQLite schema version 1 is not implemented; the receipt loader assumes
-  trusted receipt JSON shape; no live external repository has yet exercised the complete path in one acceptance run.
-- Qualification: persistence, querying, and receipts do not promote records. Harvested records remain at their
-  supplied lifecycle state; baseline extraction continues to produce RAW records.
-- First external-repository checkpoint: NOT YET REACHED. The remaining gate is one real external repository at an
-  exact revision completing ingest -> structured records -> deterministic tags -> SQLite store -> exact query ->
-  reproducibility verification -> extraction receipt without modifying the harvested source repository.
-- Next bounded action: perform that external-repository acceptance run, preserve its evidence/receipt, and repair
-  only defects demonstrated by the run before adding broader harvesting or qualification features.
-- Resume: re-check GitHub `main`, exact head, and open PR status before further implementation.
+- Maturity: the first bounded end-to-end external repository path is proven: exact Git provenance -> structured RAW
+  file records -> deterministic baseline tags -> local SQLite persistence -> exact provenance query/reload ->
+  deterministic extraction receipt -> reproduction verification, without modifying the harvested repository.
+- Completed foundation: versioned SQLite schema; idempotent upsert by repository/revision/path/unit kind; lossless
+  record reconstruction; exact AND-filtered provenance/field/tag queries; deterministic result ordering; canonical
+  receipt manifest hashing; receipt JSON round-trip; verification against SQLite-loaded records; bounded storage
+  feature contract under `features/storage/`.
+- Acceptance evidence: GitHub Actions `External Acceptance` passed on Python 3.12. PCM traversal produced 44 files
+  across 12 directories and 305294 source bytes. SQLite stored and exactly reloaded 44/44 records. All records
+  remained `RAW`; receipt verification passed; the external worktree remained clean.
+- Deterministic classifications observed: 21 TypeScript, 3 Python, 13 Markdown, 3 JSON, 4 Unknown. Role tags:
+  22 source, 14 docs, 3 config, 2 test, 3 unknown. Tag ruleset: `path-baseline-v1`.
+- Evidence binding: receipt manifest SHA-256
+  `644fb514b3dafc6c19f0260d5556ece2c7bb8dbb14aececad12598fa0f438cf7`.
+  CI artifact `pcm-checkpoint-1-evidence` contains `harvest.sqlite3`, `EXTRACTION_RECEIPT.json`, and
+  `ACCEPTANCE_SUMMARY.json`.
+- CI note: the repository's Dependency Review job reports that dependency review is not supported because the
+  repository security-analysis configuration does not provide the required dependency graph capability. This is a
+  repository configuration limitation, not an acceptance-harness failure and not a harvested-source defect.
+- Qualification: CHECKPOINT 1 REACHED. This proves deterministic external harvesting and evidence reproduction only.
+  PCM records remain `RAW`; no external code, claim, or architectural pattern is promoted to trusted reusable knowledge.
+- Known risks: schema migration beyond SQLite schema version 1 is not implemented; the receipt loader assumes trusted
+  JSON shape; lexical path tags can misclassify semantic roles; harvesting remains file-level rather than symbol/code-unit
+  level; license metadata is not yet attached to each harvest record.
+- Next bounded action: add deterministic symbol/code-unit extraction for one supported language while preserving file
+  provenance, hashes, RAW lifecycle state, and exact source-location identity. Do not add semantic ranking, vectors,
+  distributed infrastructure, or automatic qualification in this slice.
+- Resume: re-check GitHub `main`, exact head, and checkpoint evidence before further implementation.
