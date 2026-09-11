@@ -76,6 +76,7 @@ Current feature cells:
 - `features/relationships/` — deterministic TypeScript containment/import evidence, checkpointed at Checkpoint 3
 - extraction receipts — fail-closed serialized version/shape validation, checkpointed at Checkpoint 4
 - repository license evidence — deterministic root license evidence and conservative SPDX tagging, checkpointed at Checkpoint 5
+- declared dependency evidence — deterministic root `package.json` `dependencies`/`devDependencies` evidence, checkpointed at Checkpoint 6
 
 ## Current frontier
 
@@ -89,8 +90,22 @@ Checkpoint 4 hardened serialized extraction-receipt admission with explicit supp
 
 Checkpoint 5 proved deterministic root repository-license evidence on the pinned PCM target. Canonical MIT text is tagged `license:spdx:MIT`; unsupported or ambiguous text remains exact RAW evidence tagged `license:spdx:UNKNOWN`. No per-file license or legal conclusion is inferred.
 
-The next bounded frontier is `DEPENDENCY_EVIDENCE_01`: deterministically capture declared dependency evidence from a concrete manifest format justified by the pinned target. Preserve exact manifest provenance and declared names/version expressions; do not query package registries, resolve latest versions, infer vulnerabilities, or change qualification state.
+Checkpoint 6 proved deterministic direct dependency evidence from the pinned target's root `package.json`. Exact package names and version expressions are preserved for `dependencies` and `devDependencies`, runtime/development scope is explicit, malformed admitted declarations fail closed, and no registry, lockfile, transitive, vulnerability, license, or qualification inference is performed.
 
-Follow-up priorities after dependency evidence are explicit qualification gates and cross-repository comparison. A second language should be added only when a concrete target requires it.
+The next bounded frontier is `QUALIFICATION_GATE_01`: define the smallest explicit evidence-backed lifecycle transition. Qualification must consume the evidence already harvested rather than manufacture facts. Missing, ambiguous, stale, or incompatible evidence must block promotion rather than be guessed.
+
+For `QUALIFICATION_GATE_01`:
+
+- start with one narrowly defined transition justified by the pinned acceptance workflow rather than implementing the whole lifecycle at once
+- bind every transition to exact repository/revision/unit identity and explicit evidence references
+- keep evidence records immutable as evidence; record qualification disposition separately when practical
+- require deterministic admission checks where facts are machine-checkable
+- do not treat repository license evidence as automatic per-file reuse permission
+- do not treat dependency declarations as compatibility or safety proof
+- do not automatically promote anything to `REUSABLE`
+- do not introduce a generic policy engine, semantic ranking, vectors, or distributed infrastructure
+- preserve explicit rejection/blocking reasons and leave the source repository untouched
+
+Likely follow-up after a proven qualification gate is `CROSS_REPO_COMPARISON_01`. A second language should be added only when a concrete target requires it.
 
 Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification as part of the current frontier.
