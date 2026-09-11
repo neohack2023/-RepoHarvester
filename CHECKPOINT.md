@@ -220,3 +220,58 @@
   must consume provenance/receipt/license/dependency/validation evidence explicitly; missing or ambiguous evidence must
   block promotion rather than be guessed. Do not introduce automatic `REUSABLE` promotion or a generic policy engine.
 - Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before beginning qualification work.
+
+## Checkpoint 7 — evidence-backed RAW to CANDIDATE qualification
+
+- Date: 2026-09-11
+- Implementation merge on `main`: `81566adfd97d589fe40fb2a03906b8440d911837`.
+- Acceptance target: `anthonylee991/pcm` at exact revision
+  `5dfb7ecca889dd8c12b8d088a1cbf91e4f8d1cf8`.
+- Maturity: RepoHarvester now proves one explicit lifecycle transition, `RAW -> CANDIDATE`, for an exact code-unit identity
+  while preserving extraction evidence and qualification evidence as separate deterministic artifacts.
+- Gate contract: `raw-to-candidate-v1` admits symbol/code-unit records only. The subject must be present in the evaluated
+  harvest set, remain `RAW`, and be backed by a current reproducible extraction receipt for the same repository/revision,
+  exactly one explicit non-`UNKNOWN` repository-license evidence record, declared-dependency evidence, and at least one
+  explicit validation reference. Missing or ambiguous evidence produces `BLOCKED` with preserved blocking reasons.
+- Decision evidence: qualification emits `repoharvester-qualification-decision-v1` records with exact subject identity,
+  source/target lifecycle states, disposition, evidence references, blocking reasons, and a deterministic decision SHA-256.
+  A separate `repoharvester-qualification-receipt-v1` binds the exact ordered decision hashes into a reproducible manifest.
+- State mutation boundary: a PASS decision must match the exact repository/revision/path/unit identity and current state.
+  BLOCKED or identity-mismatched decisions cannot alter lifecycle state. Applying a PASS changes only
+  `qualification_state`; source/representation hashes, representation, tags, and provenance remain unchanged.
+- Pinned acceptance subject: exactly `src/core/associative.ts::computeAssociationWeight`, unit identity
+  `typescript:function:computeAssociationWeight:113:373`, was admitted from `RAW` to `CANDIDATE`. All other harvested
+  records remained `RAW`.
+- Acceptance evidence: the pinned PCM run still contains 138 total records and 123 relationships. SQLite persisted and
+  exactly reloaded `1 CANDIDATE / 137 RAW`; the source worktree remained clean; license, dependency, relationship, and
+  receipt gates remained passing.
+- Evidence binding: prequalification record manifest SHA-256 remained exactly the Checkpoint 6 value
+  `263a2d10a79da5fb4ce455744d8a7a761a39304a00668511f653cbe6af2b83d9`. Postqualification record manifest SHA-256 is
+  `9e2568ff89b8e96a4a9674b54167e04c96edd7d16521c78bc75fd61daed262ce`.
+- Qualification binding: decision SHA-256
+  `64595c5f45ebe74fe36f1d9c9ef3dd4672131e46218e89830c386a07e1650128`; decision-manifest SHA-256
+  `56c20277aada63b9fa7ffadca49eb74ceed8c668bbca8afda365c7b989a7812c`.
+- Relationship evidence remained unchanged: relationship manifest SHA-256
+  `6b98e2dcd04ec09a117e7a22ba16b0b0cebd0feb672173a0b3de0faff0cc1ce7`, with 87 `contains` and 36 `imports` edges.
+- Durable acceptance artifact: GitHub Actions artifact `pcm-checkpoint-1-evidence`, artifact ID `10283689936`, ZIP digest
+  SHA-256 `3d01c9d636909f1c3d03daf108c8d4823e5e2f57266b2aaa2439398b81b372a9`.
+- Compatibility evidence: Linux, macOS, and Windows under Python 3.8 and 3.13 each completed with 229 passing tests and only
+  the same five inherited live-host failures in `tests/query_parser/test_git_host_agnostic.py`. All six new qualification
+  tests passed in every lane. Broad CI is therefore not called green; the product slice is green relative to the documented
+  inherited network baseline.
+- Validation: pinned `External Acceptance`, both CodeQL lanes, conventional-commit validation, and container build/push
+  passed on the accepted head. Dependency Review remains non-executable because dependency graph / Advanced Security is not
+  enabled for the repository; this remains a repository capability/configuration issue rather than qualification evidence.
+- Test repair: the first synthetic non-reproducible-receipt fixture changed representation text without updating its
+  representation SHA-256, so the receipt correctly continued matching the stored hashed identity. The fixture was repaired
+  to bind the mutation to a recomputed representation hash; the production qualification contract did not need widening.
+- Qualification meaning: `CANDIDATE` means the unit has passed this bounded evidence-completeness admission gate only. It
+  does not assert code quality, security, dependency safety, legal compatibility, intended-use compatibility, or reusability.
+  No `TAGGED`, `VERIFIED`, or `REUSABLE` promotion is implied.
+- Research alignment: the gate deliberately binds exact source revision and evidence digests while keeping candidate
+  selection separate from later suitability, dependency, license, security, and validation judgments.
+- Qualification: CHECKPOINT 7 REACHED for deterministic `RAW -> CANDIDATE` admission of one pinned external code unit.
+- Next gate: `TAGGING_GATE_01` — define the smallest evidence-backed `CANDIDATE -> TAGGED` transition for one accepted code
+  unit. Require explicit functional/architectural classification evidence with provenance; preserve disagreements and
+  unknowns; do not jump to `VERIFIED` or `REUSABLE`, and do not introduce a generic scoring or policy engine.
+- Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before beginning tagging work.
