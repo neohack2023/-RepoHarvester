@@ -29,7 +29,7 @@ Use explicit states where applicable:
 
 Terminal/lineage states may include `REJECTED` and `SUPERSEDED`.
 
-State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, receipt validation, relationship discovery, license discovery, and dependency discovery must not infer promotion by themselves.
+State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, receipt validation, relationship discovery, license discovery, dependency discovery, and tagging must not infer later promotion by themselves.
 
 ## Provenance requirements
 
@@ -48,6 +48,7 @@ Every harvested unit must retain enough identity to reproduce its origin. Preser
 - qualification state
 - validation/evidence references
 - extraction receipt linkage
+- qualification decision/receipt linkage
 
 ## Implementation style
 
@@ -77,6 +78,7 @@ Current feature cells:
 - extraction receipts — fail-closed serialized version/shape validation, checkpointed at Checkpoint 4
 - repository license evidence — deterministic root license evidence and conservative SPDX tagging, checkpointed at Checkpoint 5
 - declared dependency evidence — deterministic root `package.json` `dependencies`/`devDependencies` evidence, checkpointed at Checkpoint 6
+- qualification decisions — deterministic evidence-backed `RAW -> CANDIDATE` admission with separate decision/receipt artifacts, checkpointed at Checkpoint 7
 
 ## Current frontier
 
@@ -84,7 +86,7 @@ Checkpoint 1 proved deterministic external file-level harvesting with provenance
 
 Checkpoint 2 proved deterministic TypeScript code-unit harvesting at exact source locations, SQLite schema v2 migration/query behavior, receipt v2 evidence, and pinned PCM acceptance.
 
-Checkpoint 3 proved deterministic TypeScript `contains` and `imports` relationships, SQLite schema v3 persistence/query behavior, receipt v3 relationship binding, and pinned PCM acceptance. All harvested records and relationships remain evidence only; nothing was promoted beyond `RAW`.
+Checkpoint 3 proved deterministic TypeScript `contains` and `imports` relationships, SQLite schema v3 persistence/query behavior, receipt v3 relationship binding, and pinned PCM acceptance.
 
 Checkpoint 4 hardened serialized extraction-receipt admission with explicit supported versions and fail-closed validation while preserving the Python 3.8 support floor.
 
@@ -92,20 +94,23 @@ Checkpoint 5 proved deterministic root repository-license evidence on the pinned
 
 Checkpoint 6 proved deterministic direct dependency evidence from the pinned target's root `package.json`. Exact package names and version expressions are preserved for `dependencies` and `devDependencies`, runtime/development scope is explicit, malformed admitted declarations fail closed, and no registry, lockfile, transitive, vulnerability, license, or qualification inference is performed.
 
-The next bounded frontier is `QUALIFICATION_GATE_01`: define the smallest explicit evidence-backed lifecycle transition. Qualification must consume the evidence already harvested rather than manufacture facts. Missing, ambiguous, stale, or incompatible evidence must block promotion rather than be guessed.
+Checkpoint 7 proved the first explicit lifecycle transition. `raw-to-candidate-v1` admitted exactly one pinned PCM code unit, `src/core/associative.ts::computeAssociationWeight`, from `RAW` to `CANDIDATE` using a reproducible extraction receipt, explicit non-unknown repository-license evidence, declared-dependency evidence, and an explicit validation reference. The qualification decision and receipt are deterministic and separate from extraction evidence. The remaining 137 records stayed `RAW`; all 123 relationships remained unchanged. `CANDIDATE` is evidence-completeness admission only and is not a security, quality, legal, compatibility, suitability, or reusability conclusion.
 
-For `QUALIFICATION_GATE_01`:
+The next bounded frontier is `TAGGING_GATE_01`: prove one evidence-backed `CANDIDATE -> TAGGED` transition for the already-admitted PCM code unit. Tagging should add useful functional and architectural classification without pretending classification is validation.
 
-- start with one narrowly defined transition justified by the pinned acceptance workflow rather than implementing the whole lifecycle at once
-- bind every transition to exact repository/revision/unit identity and explicit evidence references
-- keep evidence records immutable as evidence; record qualification disposition separately when practical
-- require deterministic admission checks where facts are machine-checkable
-- do not treat repository license evidence as automatic per-file reuse permission
-- do not treat dependency declarations as compatibility or safety proof
-- do not automatically promote anything to `REUSABLE`
-- do not introduce a generic policy engine, semantic ranking, vectors, or distributed infrastructure
-- preserve explicit rejection/blocking reasons and leave the source repository untouched
+For `TAGGING_GATE_01`:
 
-Likely follow-up after a proven qualification gate is `CROSS_REPO_COMPARISON_01`. A second language should be added only when a concrete target requires it.
+- operate first on the exact Checkpoint 7 CANDIDATE unit rather than bulk-tagging all harvested symbols
+- require exact repository/revision/path/unit identity and the accepted qualification-decision/receipt chain
+- define a small explicit classification vocabulary only where the target unit justifies it
+- distinguish deterministic tags derived from syntax/path/relationships from interpretive functional or architectural classifications
+- preserve the evidence or rationale behind every new classification and keep unknown/ambiguous dimensions explicit
+- preserve disagreements rather than collapsing conflicting interpretations into a score
+- keep source representation, provenance, extraction evidence, and prior qualification decision immutable
+- make `TAGGED` mean classification evidence exists, not that the unit is validated, secure, compatible, or reusable
+- do not jump to `VERIFIED` or `REUSABLE`
+- do not introduce generic semantic ranking, vector retrieval, a broad ontology, or a generic policy engine
 
-Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification as part of the current frontier.
+Likely follow-up after a proven tagging gate is a bounded `VERIFICATION_GATE_01` or `CROSS_REPO_COMPARISON_01`, chosen from demonstrated workflow need rather than roadmap momentum. A second language should be added only when a concrete target requires it.
+
+Do not add semantic ranking, vectors, distributed infrastructure, or automatic promotion as part of the current frontier.
