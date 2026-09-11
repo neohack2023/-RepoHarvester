@@ -12,19 +12,27 @@ from uuid import uuid4
 
 from gitingest.schemas import IngestionQuery
 from repoharvester import (
+    QualificationDisposition,
     QualificationState,
+    apply_candidate_qualification,
     build_declared_dependency_records,
     build_extraction_receipt,
     build_file_harvest_records,
+    build_qualification_receipt,
     build_repository_license_records,
     build_typescript_relationships,
     build_typescript_symbol_records,
+    evaluate_raw_to_candidate,
     verify_extraction_receipt,
+    verify_qualification_receipt,
     write_extraction_receipt,
+    write_qualification_decisions,
+    write_qualification_receipt,
 )
 from repoharvester.storage import SQLiteHarvestStore
 
 DEFAULT_IGNORES = {".git", "*.pyc", "__pycache__", "node_modules"}
+QUALIFICATION_VALIDATION_REFERENCE = "external-acceptance:pinned-source-clean-roundtrip-v1"
 
 
 def _git(*args: str, cwd: Path | None = None) -> str:
@@ -70,15 +78,74 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         ]
         license_records = build_repository_license_records(file_records)
         dependency_records = build_declared_dependency_records(file_records)
-        records = [*file_records, *symbol_records, *license_records, *dependency_records]
-        relationships = build_typescript_relationships(records)
+        raw_records = [*file_records, *symbol_records, *license_records, *dependency_records]
+        relationships = build_typescript_relationships(raw_records)
 
         if not file_records or not symbol_records or not relationships or not license_records or not dependency_records:
             raise RuntimeError("acceptance harvest produced incomplete deterministic evidence")
-        if {record.source_revision for record in records} != {revision}:
+        if {record.source_revision for record in raw_records} != {revision}:
             raise RuntimeError("harvest records do not bind exclusively to the pinned revision")
-        if {record.qualification_state for record in records} != {QualificationState.RAW}:
-            raise RuntimeError("acceptance harvest promoted records beyond RAW")
+        if {record.qualification_state for record in raw_records} != {QualificationState.RAW}:
+            raise RuntimeError("prequalification harvest promoted records beyond RAW")
+
+        prequalification_receipt = build_extraction_receipt(
+            raw_records,
+            relationships=relationships,
+            warnings=(),
+            next_gate="QUALIFICATION_GATE_01 raw-to-candidate evaluation",
+        )
+        if not verify_extraction_receipt(
+            prequalification_receipt,
+            raw_records,
+            relationships=relationships,
+        ):
+            raise RuntimeError("prequalification extraction receipt failed reproduction verification")
+        write_extraction_receipt(
+            output_dir / "PREQUALIFICATION_EXTRACTION_RECEIPT.json",
+            prequalification_receipt,
+        )
+
+        qualification_subjects = [
+            record
+            for record in symbol_records
+            if record.path == "src/core/associative.ts"
+            and record.symbol_name == "computeAssociationWeight"
+        ]
+        if len(qualification_subjects) != 1:
+            raise RuntimeError("qualification acceptance requires one exact computeAssociationWeight symbol")
+        qualification_subject = qualification_subjects[0]
+        qualification_decision = evaluate_raw_to_candidate(
+            qualification_subject,
+            raw_records,
+            prequalification_receipt,
+            relationships=relationships,
+            validation_references=(QUALIFICATION_VALIDATION_REFERENCE,),
+        )
+        if qualification_decision.disposition != QualificationDisposition.PASS:
+            raise RuntimeError(
+                "qualification gate blocked accepted PCM subject: "
+                + "; ".join(qualification_decision.blocking_reasons)
+            )
+        qualified_subject = apply_candidate_qualification(
+            qualification_subject,
+            qualification_decision,
+        )
+        records = [
+            qualified_subject if _record_identity(record) == _record_identity(qualification_subject) else record
+            for record in raw_records
+        ]
+
+        qualification_receipt = build_qualification_receipt([qualification_decision])
+        if not verify_qualification_receipt(qualification_receipt, [qualification_decision]):
+            raise RuntimeError("qualification receipt failed reproduction verification")
+        write_qualification_decisions(
+            output_dir / "QUALIFICATION_DECISIONS.json",
+            [qualification_decision],
+        )
+        write_qualification_receipt(
+            output_dir / "QUALIFICATION_RECEIPT.json",
+            qualification_receipt,
+        )
 
         database_path = output_dir / "harvest.sqlite3"
         if database_path.exists():
@@ -97,6 +164,19 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             raise RuntimeError("SQLite relationship round-trip mismatch")
         if sorted(map(_record_identity, reloaded)) != sorted(map(_record_identity, records)):
             raise RuntimeError("SQLite exact-query identities differ from harvested identities")
+
+        candidates = store.query_records(
+            source_repository=repository_url,
+            source_revision=revision,
+            qualification_state=QualificationState.CANDIDATE,
+        )
+        raw_stored = store.query_records(
+            source_repository=repository_url,
+            source_revision=revision,
+            qualification_state=QualificationState.RAW,
+        )
+        if candidates != [qualified_subject] or len(raw_stored) != len(records) - 1:
+            raise RuntimeError("qualification state persistence does not match the accepted decision")
 
         imports = store.query_relationships(
             source_repository=repository_url,
@@ -151,10 +231,10 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             reloaded,
             relationships=reloaded_relationships,
             warnings=(),
-            next_gate="Declared dependency evidence proven; begin qualification-gate planning",
+            next_gate="Candidate qualification proven; define TAGGED admission evidence",
         )
         if not verify_extraction_receipt(receipt, reloaded, relationships=reloaded_relationships):
-            raise RuntimeError("extraction receipt failed dependency-aware reproduction verification")
+            raise RuntimeError("extraction receipt failed qualification-aware reproduction verification")
         write_extraction_receipt(output_dir / "EXTRACTION_RECEIPT.json", receipt)
 
         status_after = _git("status", "--porcelain", cwd=checkout)
@@ -173,6 +253,7 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             "development" if "dependency:scope:development" in record.tags else "runtime"
             for record in dependency_records
         )
+        qualification_states = Counter(record.qualification_state.value for record in records)
         summary = {
             "source_repository": repository_url,
             "source_revision": revision,
@@ -188,14 +269,26 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             "database_relationship_count": len(reloaded_relationships),
             "relationship_kinds": dict(sorted(relationship_kinds.items())),
             "resolution_states": dict(sorted(resolution_states.items())),
-            "qualification_states": sorted({record.qualification_state.value for record in records}),
+            "qualification_states": dict(sorted(qualification_states.items())),
+            "qualification_subject": {
+                "path": qualified_subject.path,
+                "unit_kind": qualified_subject.unit_kind,
+                "symbol_name": qualified_subject.symbol_name,
+                "unit_identity": qualified_subject.unit_identity,
+            },
+            "qualification_decision_sha256": qualification_decision.decision_sha256,
+            "qualification_decision_manifest_sha256": qualification_receipt.decision_manifest_sha256,
+            "prequalification_manifest_sha256": prequalification_receipt.manifest_sha256,
             "manifest_sha256": receipt.manifest_sha256,
             "relationship_manifest_sha256": receipt.relationship_manifest_sha256,
             "source_worktree_clean": True,
+            "prequalification_receipt_verified": True,
+            "qualification_receipt_verified": True,
             "receipt_verified": True,
             "typescript_relationship_gate": "PASS",
             "repository_license_gate": "PASS",
             "declared_dependency_gate": "PASS",
+            "qualification_gate": "PASS",
         }
         (output_dir / "ACCEPTANCE_SUMMARY.json").write_text(
             json.dumps(summary, indent=2, sort_keys=True) + "\n",
