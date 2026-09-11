@@ -57,3 +57,40 @@
   import relationships for the TypeScript units already harvested, or add a second language when a real target requires it.
   Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification yet.
 - Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
+
+## Checkpoint 3 — deterministic TypeScript relationships
+
+- Date: 2026-09-11
+- Merged main head: `84151df2af72deb0df5bb350d031ff17a35278e7`.
+- Acceptance target: `anthonylee991/pcm` at exact revision
+  `5dfb7ecca889dd8c12b8d088a1cbf91e4f8d1cf8`.
+- Maturity: existing provenance-backed file and TypeScript code-unit records now carry deterministic structural evidence
+  through first-class directed relationships without changing lifecycle qualification state.
+- Implemented relationship kinds: file -> top-level symbol `contains` edges and parser-backed file -> import-target
+  `imports` edges. Import evidence preserves literal module specifiers and explicit `EXACT`, `UNRESOLVED`, and `EXTERNAL`
+  resolution states; repository-local resolution is limited to deterministic relative TypeScript targets.
+- Storage: SQLite schema version 3 adds first-class relationship persistence and exact relationship queries while
+  preserving prior records/tags through the v2 -> v3 migration.
+- Receipt: extraction receipt version 3 binds the relationship manifest and relationship counts into reproducible evidence.
+- Acceptance evidence: pinned PCM acceptance passed with 131 records and 123 relationships: 87 `contains` and 36 `imports`.
+  Resolution-state totals were 87 `EXACT`, 20 `UNRESOLVED`, and 16 `EXTERNAL`. SQLite relationship round-trip and exact
+  queries passed, receipt reproduction passed, every harvested record remained `RAW`, and the external source worktree
+  remained clean.
+- Evidence binding: relationship manifest SHA-256
+  `6b98e2dcd04ec09a117e7a22ba16b0b0cebd0feb672173a0b3de0faff0cc1ce7`.
+- Validation: GitHub Actions `External Acceptance`, CodeQL, conventional-commit validation, and the applicable container
+  build passed for the merged implementation head.
+- CI warning: broad inherited CI still contains live third-party-network query-parser tests. A macOS/Python 3.13 job
+  failed inside the generic test step while the RepoHarvester pinned acceptance path passed. This checkpoint does not
+  treat that inherited live-network behavior as relationship evidence and does not claim the full matrix was green.
+- Existing repository warning: Dependency Review remains non-executable because the repository does not currently expose
+  the required dependency-graph/security-analysis capability.
+- Qualification: CHECKPOINT 3 REACHED for deterministic TypeScript relationships. No harvested record or relationship was
+  promoted beyond `RAW`, and no semantic relationship inference was introduced.
+- Known limits: containment currently links files to already-supported top-level TypeScript units rather than introducing
+  nested/member code units; import resolution does not consult package managers, registries, tsconfig path aliases, or the
+  network; external and unresolved targets remain explicit evidence states rather than fabricated destinations.
+- Next gate: `RECEIPT_SCHEMA_VALIDATION_01` — add fail-closed schema/version validation for extraction receipts before
+  widening license/dependency evidence. Keep schema validation deterministic and backward-aware for supported receipt
+  versions; do not add semantic ranking, vectors, graph infrastructure, or automatic qualification.
+- Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
