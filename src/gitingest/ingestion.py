@@ -21,9 +21,8 @@ logger = get_logger(__name__)
 def ingest_query(query: IngestionQuery) -> tuple[str, str, str]:
     """Run the ingestion process for a parsed query.
 
-    This is the main entry point for analyzing a codebase directory or single file. It processes the query
-    parameters, reads the file or directory content, and generates a summary, directory structure, and file content,
-    along with token estimations.
+    This is the main entry point for analyzing a codebase directory or single file. It preserves the historical
+    prompt-friendly output contract while delegating filesystem traversal to :func:`build_file_system_tree`.
 
     Parameters
     ----------
@@ -34,6 +33,32 @@ def ingest_query(query: IngestionQuery) -> tuple[str, str, str]:
     -------
     tuple[str, str, str]
         A tuple containing the summary, directory structure, and file contents.
+
+    Raises
+    ------
+    ValueError
+        If the path cannot be found, is not a file, or the file has no content.
+
+    """
+    return format_node(build_file_system_tree(query), query=query)
+
+
+def build_file_system_tree(query: IngestionQuery) -> FileSystemNode:
+    """Build the structured filesystem evidence for an ingestion query.
+
+    The returned node tree is the deterministic structure already used by gitingest before it is flattened into
+    summary, tree, and content strings. Keeping this step separate lets sibling consumers inspect source structure
+    without changing the existing ingestion API.
+
+    Parameters
+    ----------
+    query : IngestionQuery
+        The parsed query object containing information about the repository and query parameters.
+
+    Returns
+    -------
+    FileSystemNode
+        The root file or directory node produced by the ingestion traversal.
 
     Raises
     ------
@@ -91,7 +116,7 @@ def ingest_query(query: IngestionQuery) -> tuple[str, str, str]:
                 "file_size": file_node.size,
             },
         )
-        return format_node(file_node, query=query)
+        return file_node
 
     logger.info("Processing directory", extra={"directory_path": str(path)})
 
@@ -117,7 +142,7 @@ def ingest_query(query: IngestionQuery) -> tuple[str, str, str]:
         },
     )
 
-    return format_node(root_node, query=query)
+    return root_node
 
 
 def _process_node(node: FileSystemNode, query: IngestionQuery, stats: FileSystemStats) -> None:
@@ -274,7 +299,7 @@ def _process_file(path: Path, parent_node: FileSystemNode, stats: FileSystemStat
 
 
 def limit_exceeded(stats: FileSystemStats, depth: int) -> bool:
-    """Check if any of the traversal limits have been exceeded.
+    """Check if any traversal limits have been exceeded.
 
     This function checks if the current traversal has exceeded any of the configured limits:
     maximum directory depth, maximum number of files, or maximum total size in bytes.
