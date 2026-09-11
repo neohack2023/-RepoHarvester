@@ -18,6 +18,14 @@ class QualificationState(str, Enum):
     SUPERSEDED = "SUPERSEDED"
 
 
+class ResolutionState(str, Enum):
+    """Deterministic relationship target-resolution state."""
+
+    EXACT = "EXACT"
+    UNRESOLVED = "UNRESOLVED"
+    EXTERNAL = "EXTERNAL"
+
+
 @dataclass(frozen=True)
 class HarvestRecord:
     """One provenance-backed harvested file or code-unit record."""
@@ -41,3 +49,28 @@ class HarvestRecord:
     start_column: int | None = None
     end_row: int | None = None
     end_column: int | None = None
+
+
+@dataclass(frozen=True)
+class HarvestRelationship:
+    """One deterministic directed relationship backed by source evidence."""
+
+    source_repository: str
+    source_revision: str
+    source_path: str
+    source_unit_kind: str
+    source_unit_identity: str
+    relationship_kind: str
+    target_path: str = ""
+    target_unit_kind: str = ""
+    target_unit_identity: str = ""
+    literal_target: str = ""
+    resolution_state: ResolutionState = ResolutionState.UNRESOLVED
+    start_byte: int | None = None
+    end_byte: int | None = None
+    start_row: int | None = None
+    start_column: int | None = None
+    end_row: int | None = None
+    end_column: int | None = None
+    extractor_name: str = ""
+    extractor_version: str = ""
