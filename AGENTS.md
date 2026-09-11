@@ -29,7 +29,7 @@ Use explicit states where applicable:
 
 Terminal/lineage states may include `REJECTED` and `SUPERSEDED`.
 
-State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, receipt validation, and relationship-discovery operations must not infer promotion by themselves.
+State transitions must eventually be backed by explicit evidence and admission rules. Storage, extraction, receipt validation, relationship discovery, license discovery, and dependency discovery must not infer promotion by themselves.
 
 ## Provenance requirements
 
@@ -44,6 +44,7 @@ Every harvested unit must retain enough identity to reproduce its origin. Preser
 - source and representation hashes
 - deterministic tags/ruleset
 - license/provenance evidence
+- dependency evidence
 - qualification state
 - validation/evidence references
 - extraction receipt linkage
@@ -74,6 +75,7 @@ Current feature cells:
 - `features/code-units/` — deterministic TypeScript code-unit extraction, checkpointed at Checkpoint 2
 - `features/relationships/` — deterministic TypeScript containment/import evidence, checkpointed at Checkpoint 3
 - extraction receipts — fail-closed serialized version/shape validation, checkpointed at Checkpoint 4
+- repository license evidence — deterministic root license evidence and conservative SPDX tagging, checkpointed at Checkpoint 5
 
 ## Current frontier
 
@@ -85,8 +87,10 @@ Checkpoint 3 proved deterministic TypeScript `contains` and `imports` relationsh
 
 Checkpoint 4 hardened serialized extraction-receipt admission with explicit supported versions and fail-closed validation while preserving the Python 3.8 support floor.
 
-The next bounded frontier is `LICENSE_EVIDENCE_01`: attach deterministic, provenance-backed repository license evidence without inferring per-file reuse rights or changing qualification state. Prefer exact license-file evidence and normalized identifiers only when supported deterministically by source evidence. Preserve unknown and ambiguous cases explicitly.
+Checkpoint 5 proved deterministic root repository-license evidence on the pinned PCM target. Canonical MIT text is tagged `license:spdx:MIT`; unsupported or ambiguous text remains exact RAW evidence tagged `license:spdx:UNKNOWN`. No per-file license or legal conclusion is inferred.
 
-Follow-up priorities after license evidence are dependency evidence expansion, explicit qualification gates, and cross-repository comparison. A second language should be added only when a concrete target requires it.
+The next bounded frontier is `DEPENDENCY_EVIDENCE_01`: deterministically capture declared dependency evidence from a concrete manifest format justified by the pinned target. Preserve exact manifest provenance and declared names/version expressions; do not query package registries, resolve latest versions, infer vulnerabilities, or change qualification state.
+
+Follow-up priorities after dependency evidence are explicit qualification gates and cross-repository comparison. A second language should be added only when a concrete target requires it.
 
 Do not add semantic ranking, vectors, distributed infrastructure, or automatic qualification as part of the current frontier.
