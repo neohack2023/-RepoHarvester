@@ -6,7 +6,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Iterable, Mapping, cast
 
 from repoharvester.models import HarvestRecord, HarvestRelationship
 from repoharvester.storage import SCHEMA_VERSION
@@ -195,8 +195,7 @@ def load_extraction_receipt(path: str | Path) -> ExtractionReceipt:
         raise ReceiptValidationError(f"unable to read extraction receipt: {exc}") from exc
 
     validated = validate_extraction_receipt_payload(payload)
-    version = validated["receipt_version"]
-    assert isinstance(version, str)
+    version = cast(str, validated["receipt_version"])
 
     empty_relationship_manifest = _relationship_manifest_sha256([])
     return ExtractionReceipt(
@@ -248,7 +247,11 @@ def _require_positive_int(payload: Mapping[str, object], field: str) -> None:
 
 def _require_sha256(payload: Mapping[str, object], field: str) -> None:
     value = payload.get(field)
-    if not isinstance(value, str) or len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(char not in "0123456789abcdef" for char in value)
+    ):
         raise ReceiptValidationError(f"{field} must be a lowercase SHA-256 hex digest")
 
 
@@ -259,39 +262,27 @@ def _require_string_array(payload: Mapping[str, object], field: str) -> None:
 
 
 def _string_value(payload: Mapping[str, object], field: str) -> str:
-    value = payload[field]
-    assert isinstance(value, str)
-    return value
+    return cast(str, payload[field])
 
 
 def _int_value(payload: Mapping[str, object], field: str) -> int:
-    value = payload[field]
-    assert isinstance(value, int) and not isinstance(value, bool)
-    return value
+    return cast(int, payload[field])
 
 
 def _string_array_value(payload: Mapping[str, object], field: str) -> list[str]:
-    value = payload[field]
-    assert isinstance(value, list)
-    return [item for item in value if isinstance(item, str)]
+    return list(cast(list[str], payload[field]))
 
 
 def _optional_int_value(payload: Mapping[str, object], field: str, default: int) -> int:
-    value = payload.get(field, default)
-    assert isinstance(value, int) and not isinstance(value, bool)
-    return value
+    return cast(int, payload.get(field, default))
 
 
 def _optional_string_value(payload: Mapping[str, object], field: str, default: str) -> str:
-    value = payload.get(field, default)
-    assert isinstance(value, str)
-    return value
+    return cast(str, payload.get(field, default))
 
 
 def _optional_string_array(payload: Mapping[str, object], field: str) -> list[str]:
-    value = payload.get(field, [])
-    assert isinstance(value, list)
-    return [item for item in value if isinstance(item, str)]
+    return list(cast(list[str], payload.get(field, [])))
 
 
 def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
@@ -317,7 +308,15 @@ def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
         }
         for record in records
     ]
-    entries.sort(key=lambda item: (item["source_repository"], item["source_revision"], item["path"], item["unit_kind"], item["unit_identity"]))
+    entries.sort(
+        key=lambda item: (
+            item["source_repository"],
+            item["source_revision"],
+            item["path"],
+            item["unit_kind"],
+            item["unit_identity"],
+        )
+    )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
 
@@ -347,11 +346,20 @@ def _relationship_manifest_sha256(relationships: Iterable[HarvestRelationship]) 
         }
         for item in relationships
     ]
-    entries.sort(key=lambda item: (
-        item["source_repository"], item["source_revision"], item["source_path"], item["source_unit_kind"],
-        item["source_unit_identity"], item["relationship_kind"], item["target_path"],
-        item["target_unit_identity"], item["literal_target"], item["start_byte"] if item["start_byte"] is not None else -1,
-        item["end_byte"] if item["end_byte"] is not None else -1,
-    ))
+    entries.sort(
+        key=lambda item: (
+            item["source_repository"],
+            item["source_revision"],
+            item["source_path"],
+            item["source_unit_kind"],
+            item["source_unit_identity"],
+            item["relationship_kind"],
+            item["target_path"],
+            item["target_unit_identity"],
+            item["literal_target"],
+            item["start_byte"] if item["start_byte"] is not None else -1,
+            item["end_byte"] if item["end_byte"] is not None else -1,
+        )
+    )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
