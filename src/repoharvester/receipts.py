@@ -54,6 +54,12 @@ def build_extraction_receipt(
     if len(repositories) != 1 or len(revisions) != 1:
         raise ValueError("extraction receipts require exactly one source repository and revision")
 
+    tag_rulesets = tuple(
+        sorted({record.tag_ruleset for record in materialized if record.tag_ruleset is not None})
+    )
+    qualification_states = tuple(
+        sorted({record.qualification_state.value for record in materialized})
+    )
     return ExtractionReceipt(
         receipt_version=RECEIPT_VERSION,
         operation=RECEIPT_OPERATION,
@@ -61,8 +67,8 @@ def build_extraction_receipt(
         source_revision=next(iter(revisions)),
         record_count=len(materialized),
         manifest_sha256=_manifest_sha256(materialized),
-        tag_rulesets=tuple(sorted({record.tag_ruleset for record in materialized if record.tag_ruleset is not None})),
-        qualification_states=tuple(sorted({record.qualification_state.value for record in materialized})),
+        tag_rulesets=tag_rulesets,
+        qualification_states=qualification_states,
         database_schema_version=database_schema_version,
         warnings=tuple(sorted(set(warnings))),
         next_gate=next_gate,
@@ -86,7 +92,10 @@ def verify_extraction_receipt(receipt: ExtractionReceipt, records: Iterable[Harv
 def write_extraction_receipt(path: str | Path, receipt: ExtractionReceipt) -> None:
     """Write canonical pretty JSON suitable for durable evidence storage."""
     output = Path(path)
-    output.write_text(json.dumps(receipt.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(receipt.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def load_extraction_receipt(path: str | Path) -> ExtractionReceipt:
@@ -123,6 +132,13 @@ def _manifest_sha256(records: Iterable[HarvestRecord]) -> str:
                 "qualification_state": record.qualification_state.value,
             }
         )
-    entries.sort(key=lambda item: (item["source_repository"], item["source_revision"], item["path"], item["unit_kind"]))
+    entries.sort(
+        key=lambda item: (
+            item["source_repository"],
+            item["source_revision"],
+            item["path"],
+            item["unit_kind"],
+        )
+    )
     canonical = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
