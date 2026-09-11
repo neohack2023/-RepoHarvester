@@ -1,6 +1,7 @@
 """RepoHarvester evidence and knowledge-layer primitives."""
 
 from repoharvester.evidence import build_evidence_tree
+from repoharvester.licenses import LICENSE_EVIDENCE_RULESET, build_repository_license_records
 from repoharvester.models import (
     HarvestRecord,
     HarvestRelationship,
@@ -25,6 +26,7 @@ __all__ = [
     "ExtractionReceipt",
     "HarvestRecord",
     "HarvestRelationship",
+    "LICENSE_EVIDENCE_RULESET",
     "QualificationState",
     "ResolutionState",
     "TYPESCRIPT_RELATIONSHIP_RULESET",
@@ -32,6 +34,7 @@ __all__ = [
     "build_evidence_tree",
     "build_extraction_receipt",
     "build_file_harvest_records",
+    "build_repository_license_records",
     "build_typescript_relationships",
     "build_typescript_symbol_records",
     "load_extraction_receipt",

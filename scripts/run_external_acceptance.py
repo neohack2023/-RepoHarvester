@@ -15,6 +15,7 @@ from repoharvester import (
     QualificationState,
     build_extraction_receipt,
     build_file_harvest_records,
+    build_repository_license_records,
     build_typescript_relationships,
     build_typescript_symbol_records,
     verify_extraction_receipt,
@@ -55,11 +56,12 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         query = IngestionQuery(local_path=checkout, url=repository_url, slug=slug, id=uuid4(), commit=revision, ignore_patterns=DEFAULT_IGNORES)
         file_records = build_file_harvest_records(query)
         symbol_records = [symbol for file_record in file_records for symbol in build_typescript_symbol_records(file_record)]
-        records = [*file_records, *symbol_records]
+        license_records = build_repository_license_records(file_records)
+        records = [*file_records, *symbol_records, *license_records]
         relationships = build_typescript_relationships(records)
 
-        if not file_records or not symbol_records or not relationships:
-            raise RuntimeError("acceptance harvest produced incomplete record/relationship evidence")
+        if not file_records or not symbol_records or not relationships or not license_records:
+            raise RuntimeError("acceptance harvest produced incomplete record/relationship/license evidence")
         if {record.source_revision for record in records} != {revision}:
             raise RuntimeError("harvest records do not bind exclusively to the pinned revision")
         if {record.qualification_state for record in records} != {QualificationState.RAW}:
@@ -85,14 +87,25 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
         if not imports or not contains:
             raise RuntimeError("relationship acceptance requires both imports and containment evidence")
 
+        stored_license_evidence = store.query_records(
+            source_repository=repository_url,
+            source_revision=revision,
+            unit_kind="evidence:repository-license",
+            tags=("evidence:repository-license", "license:spdx:MIT"),
+        )
+        if len(stored_license_evidence) != 1 or stored_license_evidence[0].path != "LICENSE":
+            raise RuntimeError("license acceptance requires one exact root MIT license evidence record")
+        if stored_license_evidence[0].representation != license_records[0].representation:
+            raise RuntimeError("stored license evidence changed the exact license representation")
+
         receipt = build_extraction_receipt(
             reloaded,
             relationships=reloaded_relationships,
             warnings=(),
-            next_gate="TypeScript relationships proven; begin receipt-schema validation or license evidence slice",
+            next_gate="Repository license evidence proven; begin dependency evidence slice",
         )
         if not verify_extraction_receipt(receipt, reloaded, relationships=reloaded_relationships):
-            raise RuntimeError("extraction receipt failed relationship reproduction verification")
+            raise RuntimeError("extraction receipt failed license-aware reproduction verification")
         write_extraction_receipt(output_dir / "EXTRACTION_RECEIPT.json", receipt)
 
         status_after = _git("status", "--porcelain", cwd=checkout)
@@ -101,11 +114,19 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
 
         relationship_kinds = Counter(item.relationship_kind for item in relationships)
         resolution_states = Counter(item.resolution_state.value for item in relationships)
+        license_spdx_tags = sorted(
+            tag
+            for record in license_records
+            for tag in record.tags
+            if tag.startswith("license:spdx:")
+        )
         summary = {
             "source_repository": repository_url,
             "source_revision": revision,
             "file_record_count": len(file_records),
             "symbol_record_count": len(symbol_records),
+            "license_evidence_record_count": len(license_records),
+            "license_spdx_tags": license_spdx_tags,
             "record_count": len(records),
             "database_record_count": len(reloaded),
             "relationship_count": len(relationships),
@@ -118,6 +139,7 @@ def run_acceptance(repository_url: str, revision: str, slug: str, output_dir: Pa
             "source_worktree_clean": True,
             "receipt_verified": True,
             "typescript_relationship_gate": "PASS",
+            "repository_license_gate": "PASS",
         }
         (output_dir / "ACCEPTANCE_SUMMARY.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return summary
