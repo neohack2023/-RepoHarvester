@@ -16,7 +16,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: neohack2023/repoharvester
   PUSH_FROM_PR: >-
     ${{ github.event_name == 'pull_request' &&
        (
