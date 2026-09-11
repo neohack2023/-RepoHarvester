@@ -167,3 +167,56 @@
   format justified by the pinned target, preserve exact manifest provenance, avoid package-registry/network resolution,
   and keep all resulting evidence RAW.
 - Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before the next implementation slice.
+
+## Checkpoint 6 — deterministic declared dependency evidence
+
+- Date: 2026-09-11
+- Implementation merge on `main`: `75b8412f2fa608b364c8f3513e7e61a072fbc9fa`.
+- Acceptance target: `anthonylee991/pcm` at exact revision
+  `5dfb7ecca889dd8c12b8d088a1cbf91e4f8d1cf8`.
+- Maturity: direct dependency declarations from the pinned target's root `package.json` now enter the existing
+  provenance-backed harvest-record evidence spine without package-manager resolution, registry lookup, or qualification
+  promotion.
+- Admission boundary: `package-json-dependencies-v1` admits only root `package.json` `dependencies` and
+  `devDependencies`. Runtime and development scope is recorded deterministically, exact package names and version
+  expressions are preserved verbatim, and malformed admitted sections/non-string declarations fail closed.
+- Deliberate exclusion: `trustedDependencies` is not treated as a versioned dependency requirement because it carries
+  trust/install semantics rather than a declared version requirement. Peer, optional, lockfile, and transitive dependency
+  evidence remain out of scope for this slice.
+- Storage and receipt: dependency declarations are distinct RAW `evidence:declared-dependency` harvest records using the
+  existing SQLite v3 record path and current receipt manifest. No database schema migration or parallel dependency store
+  was introduced.
+- Acceptance evidence: pinned PCM acceptance produced 44 file records + 87 TypeScript symbol records + 1 repository-license
+  evidence record + 6 declared-dependency records = 138 total records. SQLite stored/reloaded all 138 exactly. The six
+  declarations split deterministically into 3 runtime and 3 development dependencies; receipt reproduction passed; all
+  records remained `RAW`; the harvested source worktree remained clean.
+- Relationship evidence: the existing 123 relationships remained unchanged: 87 `contains` and 36 `imports`, with 87
+  `EXACT`, 20 `UNRESOLVED`, and 16 `EXTERNAL` resolution states.
+- Evidence binding: record manifest SHA-256
+  `263a2d10a79da5fb4ce455744d8a7a761a39304a00668511f653cbe6af2b83d9`.
+  Relationship manifest SHA-256 remained
+  `6b98e2dcd04ec09a117e7a22ba16b0b0cebd0feb672173a0b3de0faff0cc1ce7`.
+- Validation: exact-head pinned `External Acceptance`, CodeQL, and conventional-commit validation passed. The container
+  build-and-push step completed successfully; artifact-attestation generation was skipped by workflow conditions and
+  post-job cleanup was still finishing when this checkpoint text was prepared.
+- Compatibility evidence: the exact repaired PR head was exercised on Linux, macOS, and Windows under Python 3.8 and
+  Python 3.13. In every lane, all 223 non-live-host tests passed, including dependency, evidence, storage, receipt, license,
+  relationship, symbol, and tag suites. The only five failures in each lane were the already-documented inherited
+  `tests/query_parser/test_git_host_agnostic.py` live-host cases: Bitbucket authentication behavior in full/noscheme forms,
+  Alpine GitLab HTTP 418 in full/noscheme forms, and Bitbucket slug host discovery.
+- Portability repair: Windows CI exposed a test-contract defect where raw upstream `FileSystemNode.path_str` preserves
+  native backslashes while the test compared it against repository-style `/` paths. The test helper now normalizes only
+  the comparison form; raw upstream evidence remains untouched and harvest records continue their existing portable path
+  normalization. Both Windows 3.8 and 3.13 then passed the RepoHarvester evidence test.
+- Existing repository warning: Dependency Review remains non-executable because the repository does not currently expose
+  the required dependency-graph/security-analysis capability. This remains a repository configuration/capability issue,
+  not dependency-evidence validation.
+- Qualification: CHECKPOINT 6 REACHED. Dependency declarations remain RAW provenance evidence. No semantic compatibility,
+  vulnerability status, dependency license, trust judgment, version resolution, or promotion is inferred.
+- Known limits: root `package.json` only; direct runtime/development declarations only; no peer/optional/trusted dependency
+  modeling; no lockfile or transitive graph; no semver/package-registry resolution; no vulnerability or dependency-license
+  inference; no qualification transition.
+- Next gate: `QUALIFICATION_GATE_01` — define the smallest explicit, evidence-backed lifecycle transition. Qualification
+  must consume provenance/receipt/license/dependency/validation evidence explicitly; missing or ambiguous evidence must
+  block promotion rather than be guessed. Do not introduce automatic `REUSABLE` promotion or a generic policy engine.
+- Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before beginning qualification work.
