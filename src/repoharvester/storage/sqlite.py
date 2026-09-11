@@ -1,4 +1,4 @@
-"""Deterministic SQLite persistence for harvest records."""
+"""Deterministic SQLite persistence and exact retrieval for harvest records."""
 
 from __future__ import annotations
 
@@ -37,9 +37,15 @@ CREATE INDEX IF NOT EXISTS idx_harvest_record_tags_tag
 ON harvest_record_tags(tag);
 """
 
+_RECORD_COLUMNS = """
+r.id, r.source_repository, r.source_revision, r.path, r.unit_kind, r.language,
+r.source_sha256, r.representation_sha256, r.representation,
+r.qualification_state, r.tag_ruleset
+"""
+
 
 class SQLiteHarvestStore:
-    """Persist provenance-backed harvest records in one local SQLite database."""
+    """Persist and exactly retrieve provenance-backed harvest records."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -101,23 +107,72 @@ class SQLiteHarvestStore:
 
     def all_records(self) -> list[HarvestRecord]:
         """Load all records in deterministic provenance/path order."""
+        return self.query_records()
+
+    def query_records(
+        self,
+        *,
+        source_repository: str | None = None,
+        source_revision: str | None = None,
+        path: str | None = None,
+        unit_kind: str | None = None,
+        language: str | None = None,
+        qualification_state: QualificationState | None = None,
+        tags: Iterable[str] = (),
+    ) -> list[HarvestRecord]:
+        """Return records matching every supplied exact filter and tag."""
         self.initialize()
+        clauses: list[str] = []
+        parameters: list[str] = []
+        exact_filters = (
+            ("r.source_repository", source_repository),
+            ("r.source_revision", source_revision),
+            ("r.path", path),
+            ("r.unit_kind", unit_kind),
+            ("r.language", language),
+        )
+        for column, value in exact_filters:
+            if value is not None:
+                clauses.append(f"{column} = ?")
+                parameters.append(value)
+
+        if qualification_state is not None:
+            clauses.append("r.qualification_state = ?")
+            parameters.append(qualification_state.value)
+
+        for tag in sorted(set(tags)):
+            clauses.append(
+                "EXISTS (SELECT 1 FROM harvest_record_tags t "
+                "WHERE t.record_id = r.id AND t.tag = ?)"
+            )
+            parameters.append(tag)
+
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        statement = (
+            f"SELECT {_RECORD_COLUMNS} FROM harvest_records r{where} "
+            "ORDER BY r.source_repository, r.source_revision, r.path, r.unit_kind"
+        )
         with self._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT id, source_repository, source_revision, path, unit_kind, language,
-                       source_sha256, representation_sha256, representation,
-                       qualification_state, tag_ruleset
-                FROM harvest_records
-                ORDER BY source_repository, source_revision, path, unit_kind
-                """
+            rows = connection.execute(statement, parameters).fetchall()
+            return self._records_from_rows(connection, rows)
+
+    def _records_from_rows(
+        self,
+        connection: sqlite3.Connection,
+        rows: list[tuple],
+    ) -> list[HarvestRecord]:
+        record_ids = [row[0] for row in rows]
+        tags_by_record: dict[int, tuple[str, ...]] = {}
+        if record_ids:
+            placeholders = ",".join("?" for _ in record_ids)
+            tag_rows = connection.execute(
+                f"SELECT record_id, tag FROM harvest_record_tags "
+                f"WHERE record_id IN ({placeholders}) ORDER BY record_id, tag",
+                record_ids,
             ).fetchall()
-            tags_by_record: dict[int, tuple[str, ...]] = {}
-            for row in connection.execute(
-                "SELECT record_id, tag FROM harvest_record_tags ORDER BY record_id, tag"
-            ).fetchall():
-                tags_by_record.setdefault(row[0], ())
-                tags_by_record[row[0]] += (row[1],)
+            for record_id, tag in tag_rows:
+                tags_by_record.setdefault(record_id, ())
+                tags_by_record[record_id] += (tag,)
 
         return [
             HarvestRecord(
