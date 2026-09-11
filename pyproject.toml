@@ -15,6 +15,8 @@ dependencies = [
     "starlette>=0.40.0",  # Minimum safe release (https://osv.dev/vulnerability/GHSA-f96h-pmfr-66vw)
     "strenum; python_version < '3.11'",
     "tiktoken>=0.7.0",  # Support for o200k_base encoding
+    "tree-sitter==0.21.3",
+    "tree-sitter-typescript==0.21.2",
     "typing_extensions>= 4.0.0; python_version < '3.10'",
 ]
 
@@ -105,10 +107,6 @@ per-file-ignores = { "tests/**/*.py" = ["S101"] } # Skip the "assert used" warni
 
 [tool.ruff.lint.pylint]
 max-returns = 10
-
-[tool.ruff.lint.isort]
-order-by-type = true
-case-sensitive = true
 
 [tool.pycln]
 all = true
