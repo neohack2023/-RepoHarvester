@@ -33,7 +33,7 @@ def _record() -> HarvestRecord:
 
 
 def _payload() -> dict[str, object]:
-    return build_extraction_receipt([_record()]).to_dict()
+    return json.loads(json.dumps(build_extraction_receipt([_record()]).to_dict()))
 
 
 def test_current_receipt_payload_passes_fail_closed_validation(tmp_path) -> None:
@@ -45,7 +45,7 @@ def test_current_receipt_payload_passes_fail_closed_validation(tmp_path) -> None
     loaded = load_extraction_receipt(path)
 
     assert validated == payload
-    assert loaded.to_dict() == payload
+    assert json.loads(json.dumps(loaded.to_dict())) == payload
     assert verify_extraction_receipt(loaded, [_record()])
 
 
