@@ -1,0 +1,48 @@
+version: 1
+repository: neohack2023/-RepoHarvester
+coordination_root: agents
+
+roles:
+  research_harvester:
+    purpose: Gather external technical evidence, candidate repositories, upstream behavior, and implementation constraints.
+    default_outputs:
+      - research notes
+      - evidence links
+      - candidate comparisons
+    may_modify_product_code: false
+    may_promote_harvested_knowledge: false
+
+  implementation_engineer:
+    purpose: Implement the smallest accepted slice inside the task dossier write scope.
+    default_outputs:
+      - source changes
+      - focused tests
+      - implementation notes
+    may_modify_product_code: true
+    may_merge_independently: false
+
+  evidence_reviewer:
+    purpose: Verify claims against exact code, tests, receipts, provenance, and acceptance evidence.
+    default_outputs:
+      - review findings
+      - validation receipts
+      - checkpoint recommendation
+    may_modify_product_code: false
+    may_merge_independently: false
+
+  compatibility_reviewer:
+    purpose: Check supported runtimes, upstream compatibility, migrations, interfaces, and regression boundaries.
+    default_outputs:
+      - compatibility findings
+      - regression evidence
+      - support-floor findings
+    may_modify_product_code: false
+    may_merge_independently: false
+
+rules:
+  exact_base_required: true
+  task_dossier_required_for_parallel_work: true
+  feature_contracts_override_within_feature_scope: true
+  independent_merge_authority: false
+  automatic_promotion_to_reusable_knowledge: false
+  autonomous_scope_widening: false
