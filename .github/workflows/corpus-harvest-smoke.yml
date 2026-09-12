@@ -4,13 +4,33 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      repository_url:
+        description: Git clone URL to harvest
+        required: true
+        default: https://github.com/nradawg/backoff-schedule.git
+        type: string
+      revision:
+        description: Exact commit SHA or remote ref; leave blank to resolve remote HEAD
+        required: false
+        default: f4ed89aca0618c169ed68ccb2a261df8b971f415
+        type: string
+      output_slug:
+        description: Directory/artifact-safe slug for this harvest
+        required: true
+        default: backoff-schedule
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  backoff-schedule:
+  harvest:
     runs-on: ubuntu-latest
+    env:
+      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/nradawg/backoff-schedule.git' }}
+      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || 'f4ed89aca0618c169ed68ccb2a261df8b971f415' }}
+      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'backoff-schedule' }}
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -26,17 +46,22 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ".[dev]"
 
-      - name: Harvest pinned external repository into shared corpus
+      - name: Harvest repository into shared corpus
+        shell: bash
         run: |
-          python scripts/run_corpus_harvest.py \
-            https://github.com/nradawg/backoff-schedule.git \
-            --revision f4ed89aca0618c169ed68ccb2a261df8b971f415 \
-            --database acceptance/corpus/harvest.sqlite3 \
-            --output-dir acceptance/corpus/backoff-schedule
+          args=(
+            "$REPOSITORY_URL"
+            --database acceptance/corpus/harvest.sqlite3
+            --output-dir "acceptance/corpus/$OUTPUT_SLUG"
+          )
+          if [[ -n "$REVISION" ]]; then
+            args+=(--revision "$REVISION")
+          fi
+          python scripts/run_corpus_harvest.py "${args[@]}"
 
       - name: Upload corpus evidence
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: backoff-schedule-corpus-evidence
+          name: ${{ env.OUTPUT_SLUG }}-corpus-evidence
           path: acceptance/corpus/
           if-no-files-found: error
