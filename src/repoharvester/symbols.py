@@ -12,6 +12,7 @@ from repoharvester.models import HarvestRecord
 TYPESCRIPT_SYMBOL_RULESET = "typescript-symbol-v1"
 
 _TYPESCRIPT_LANGUAGE = Language(tstypescript.language_typescript(), "typescript")
+_TSX_LANGUAGE = Language(tstypescript.language_tsx(), "tsx")
 _DECLARATION_KINDS = {
     "function_declaration": "function",
     "class_declaration": "class",
@@ -21,6 +22,11 @@ _DECLARATION_KINDS = {
 }
 
 
+def _language_for_path(path: str) -> Language:
+    """Select the deterministic Tree-sitter grammar from the file suffix."""
+    return _TSX_LANGUAGE if path.lower().endswith(".tsx") else _TYPESCRIPT_LANGUAGE
+
+
 def build_typescript_symbol_records(file_record: HarvestRecord) -> list[HarvestRecord]:
     """Extract RAW top-level TypeScript declarations from one file record."""
     if file_record.unit_kind != "file" or file_record.language != "TypeScript":
@@ -28,7 +34,7 @@ def build_typescript_symbol_records(file_record: HarvestRecord) -> list[HarvestR
 
     source = file_record.representation.encode("utf-8")
     parser = Parser()
-    parser.set_language(_TYPESCRIPT_LANGUAGE)
+    parser.set_language(_language_for_path(file_record.path))
     tree = parser.parse(source)
     if tree.root_node.has_error:
         message = f"cannot deterministically extract symbols from parse-error file: {file_record.path}"
