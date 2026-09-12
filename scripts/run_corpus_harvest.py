@@ -16,6 +16,7 @@ from repoharvester.corpus import harvest_into_corpus
 from repoharvester.receipts import write_extraction_receipt
 
 DEFAULT_IGNORES = {".git", "*.pyc", "__pycache__", "node_modules"}
+FULL_COMMIT_SHA = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
 def _git(*args: str, cwd: Path | None = None) -> str:
@@ -30,7 +31,15 @@ def _git(*args: str, cwd: Path | None = None) -> str:
 
 
 def _resolve_revision(repository_url: str, revision: str | None) -> str:
-    """Resolve a caller ref, or remote HEAD, to one exact commit SHA."""
+    """Resolve a caller ref, or remote HEAD, to one exact commit SHA.
+
+    Full commit SHAs are already exact identities, so they are passed through
+    and subsequently verified by the fetch/checkout step. Named refs and HEAD
+    are resolved with ``git ls-remote`` before any harvest begins.
+    """
+
+    if revision is not None and FULL_COMMIT_SHA.fullmatch(revision):
+        return revision.lower()
 
     ref = revision or "HEAD"
     output = _git("ls-remote", repository_url, ref)
