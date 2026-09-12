@@ -142,3 +142,39 @@ def test_invalid_root_tsconfig_fails_closed_to_external() -> None:
     assert len(imports) == 1
     assert imports[0].resolution_state == ResolutionState.EXTERNAL
     assert imports[0].target_path == ""
+
+
+def test_multiple_tsconfig_files_disable_alias_resolution() -> None:
+    root = _json_file(
+        "tsconfig.json",
+        '{"compilerOptions":{"paths":{"@/*":["src/*"]}}}\n',
+    )
+    nested = _json_file(
+        "examples/tsconfig.app.json",
+        '{"compilerOptions":{"paths":{"@/*":["examples/src/*"]}}}\n',
+    )
+    source = _file("src/App.ts", 'import x from "@/components/Button";\n')
+    button = _file("src/components/Button.ts", "export const Button = 1;\n")
+
+    relationships = build_typescript_relationships([root, nested, source, button])
+    imports = [item for item in relationships if item.relationship_kind == "imports"]
+
+    assert len(imports) == 1
+    assert imports[0].resolution_state == ResolutionState.EXTERNAL
+    assert imports[0].target_path == ""
+
+
+def test_root_tsconfig_extends_disables_alias_resolution() -> None:
+    root = _json_file(
+        "tsconfig.json",
+        '{"extends":"./base.json","compilerOptions":{"paths":{"@/*":["src/*"]}}}\n',
+    )
+    source = _file("src/App.ts", 'import x from "@/components/Button";\n')
+    button = _file("src/components/Button.ts", "export const Button = 1;\n")
+
+    relationships = build_typescript_relationships([root, source, button])
+    imports = [item for item in relationships if item.relationship_kind == "imports"]
+
+    assert len(imports) == 1
+    assert imports[0].resolution_state == ResolutionState.EXTERNAL
+    assert imports[0].target_path == ""
