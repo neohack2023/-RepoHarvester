@@ -1,4 +1,4 @@
-"""Harvest any exact Git repository revision into a shared RepoHarvester corpus."""
+"""Harvest a Git repository into a shared RepoHarvester corpus."""
 
 from __future__ import annotations
 
@@ -29,6 +29,20 @@ def _git(*args: str, cwd: Path | None = None) -> str:
     return completed.stdout.strip()
 
 
+def _resolve_revision(repository_url: str, revision: str | None) -> str:
+    """Resolve a caller ref, or remote HEAD, to one exact commit SHA."""
+
+    ref = revision or "HEAD"
+    output = _git("ls-remote", repository_url, ref)
+    matches = [line.split("\t", 1)[0] for line in output.splitlines() if line.strip()]
+    unique = sorted(set(matches))
+    if len(unique) != 1:
+        raise RuntimeError(
+            f"could not resolve {ref!r} to one exact revision for {repository_url!r}"
+        )
+    return unique[0]
+
+
 def _checkout_exact_revision(repository_url: str, revision: str, destination: Path) -> str:
     _git("init", str(destination))
     _git("remote", "add", "origin", repository_url, cwd=destination)
@@ -53,22 +67,23 @@ def _derive_slug(repository_url: str) -> str:
 
 def run_corpus_harvest(
     repository_url: str,
-    revision: str,
     database_path: Path,
     output_dir: Path,
     *,
+    revision: str | None = None,
     slug: str | None = None,
 ) -> dict[str, object]:
-    """Checkout, harvest, persist, receipt, and prove source immutability."""
+    """Resolve, checkout, harvest, persist, receipt, and prove source immutability."""
 
     output_dir.mkdir(parents=True, exist_ok=True)
     database_path.parent.mkdir(parents=True, exist_ok=True)
     resolved_slug = slug or _derive_slug(repository_url)
+    resolved_revision = _resolve_revision(repository_url, revision)
 
     with tempfile.TemporaryDirectory(prefix="repoharvester-corpus-") as temp_dir:
         checkout = Path(temp_dir) / "source"
         checkout.mkdir()
-        _checkout_exact_revision(repository_url, revision, checkout)
+        _checkout_exact_revision(repository_url, resolved_revision, checkout)
         status_before = _git("status", "--porcelain", cwd=checkout)
 
         query = IngestionQuery(
@@ -76,7 +91,7 @@ def run_corpus_harvest(
             url=repository_url,
             slug=resolved_slug,
             id=uuid4(),
-            commit=revision,
+            commit=resolved_revision,
             ignore_patterns=DEFAULT_IGNORES,
         )
         result = harvest_into_corpus(query, database_path)
@@ -90,6 +105,8 @@ def run_corpus_harvest(
         summary = dict(result.summary)
         summary.update(
             {
+                "requested_revision": revision,
+                "resolved_revision": resolved_revision,
                 "slug": resolved_slug,
                 "source_worktree_clean": True,
                 "output_dir": str(output_dir),
@@ -104,10 +121,13 @@ def run_corpus_harvest(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Harvest an exact repository revision into a shared RepoHarvester SQLite corpus."
+        description="Harvest a repository into a shared RepoHarvester SQLite corpus."
     )
     parser.add_argument("repository_url", help="Git clone URL for the repository to harvest")
-    parser.add_argument("--revision", required=True, help="Exact Git commit SHA to harvest")
+    parser.add_argument(
+        "--revision",
+        help="Exact commit SHA or remote ref. If omitted, remote HEAD is resolved and pinned.",
+    )
     parser.add_argument(
         "--database",
         type=Path,
@@ -127,9 +147,9 @@ def main() -> None:
         json.dumps(
             run_corpus_harvest(
                 args.repository_url,
-                args.revision,
                 args.database,
                 args.output_dir,
+                revision=args.revision,
                 slug=args.slug,
             ),
             indent=2,
