@@ -16,6 +16,12 @@ EXTRACTOR_NAME = "tree-sitter-typescript"
 EXTRACTOR_VERSION = "0.21.2"
 
 _TYPESCRIPT_LANGUAGE = Language(tstypescript.language_typescript(), "typescript")
+_TSX_LANGUAGE = Language(tstypescript.language_tsx(), "tsx")
+
+
+def _language_for_path(path: str) -> Language:
+    """Select the deterministic Tree-sitter grammar from the file suffix."""
+    return _TSX_LANGUAGE if path.lower().endswith(".tsx") else _TYPESCRIPT_LANGUAGE
 
 
 def build_typescript_relationships(records: Iterable[HarvestRecord]) -> list[HarvestRelationship]:
@@ -66,7 +72,7 @@ def _import_relationships(
 ) -> list[HarvestRelationship]:
     source = file_record.representation.encode("utf-8")
     parser = Parser()
-    parser.set_language(_TYPESCRIPT_LANGUAGE)
+    parser.set_language(_language_for_path(file_record.path))
     tree = parser.parse(source)
     if tree.root_node.has_error:
         message = f"cannot deterministically extract relationships from parse-error file: {file_record.path}"
@@ -130,7 +136,14 @@ def _resolve_module(
     base = posixpath.normpath(posixpath.join(posixpath.dirname(source_path), module_specifier))
     candidates = [base]
     if not posixpath.splitext(base)[1]:
-        candidates.extend([f"{base}.ts", posixpath.join(base, "index.ts")])
+        candidates.extend(
+            [
+                f"{base}.ts",
+                f"{base}.tsx",
+                posixpath.join(base, "index.ts"),
+                posixpath.join(base, "index.tsx"),
+            ]
+        )
     for candidate in candidates:
         if candidate in files_by_path:
             return candidate, ResolutionState.EXACT
