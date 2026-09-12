@@ -8,17 +8,17 @@ on:
       repository_url:
         description: Git clone URL to harvest
         required: true
-        default: https://github.com/baranwang/stremio-addon-douban.git
+        default: https://github.com/nradawg/backoff-schedule.git
         type: string
       revision:
         description: Exact commit SHA or remote ref; leave blank to resolve remote HEAD
         required: false
-        default: 35b2633a9e4af7bc3ac2f0ac747e9cec5e8719f8
+        default: f4ed89aca0618c169ed68ccb2a261df8b971f415
         type: string
       output_slug:
         description: Directory/artifact-safe slug for this harvest
         required: true
-        default: stremio-alias-feature
+        default: backoff-schedule
         type: string
 
 permissions:
@@ -28,9 +28,9 @@ jobs:
   harvest:
     runs-on: ubuntu-latest
     env:
-      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/baranwang/stremio-addon-douban.git' }}
-      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || '35b2633a9e4af7bc3ac2f0ac747e9cec5e8719f8' }}
-      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'stremio-alias-feature' }}
+      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/nradawg/backoff-schedule.git' }}
+      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || 'f4ed89aca0618c169ed68ccb2a261df8b971f415' }}
+      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'backoff-schedule' }}
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
