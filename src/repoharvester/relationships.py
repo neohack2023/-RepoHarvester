@@ -24,9 +24,19 @@ def _language_for_path(path: str) -> Language:
     return _TSX_LANGUAGE if path.lower().endswith(".tsx") else _TYPESCRIPT_LANGUAGE
 
 
-def build_typescript_relationships(records: Iterable[HarvestRecord]) -> list[HarvestRelationship]:
-    """Build deterministic containment and import relationships for TypeScript records."""
+def build_typescript_relationships(
+    records: Iterable[HarvestRecord],
+    *,
+    skip_source_paths: Iterable[str] = (),
+) -> list[HarvestRelationship]:
+    """Build deterministic containment and import relationships for TypeScript records.
+
+    ``skip_source_paths`` is used by the generic corpus harvester when the pinned
+    parser cannot represent one source file. The file remains available as an
+    import target, but no semantic relationships are fabricated from that file.
+    """
     materialized = list(records)
+    skipped = frozenset(skip_source_paths)
     file_records = [
         record for record in materialized if record.unit_kind == "file" and record.language == "TypeScript"
     ]
@@ -61,7 +71,8 @@ def build_typescript_relationships(records: Iterable[HarvestRecord]) -> list[Har
                     extractor_version=EXTRACTOR_VERSION,
                 )
             )
-        relationships.extend(_import_relationships(file_record, files_by_path))
+        if file_record.path not in skipped:
+            relationships.extend(_import_relationships(file_record, files_by_path))
 
     return sorted(relationships, key=_relationship_sort_key)
 

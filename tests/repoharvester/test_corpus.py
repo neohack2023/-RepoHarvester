@@ -13,10 +13,20 @@ from repoharvester.models import QualificationState
 from repoharvester.storage import SQLiteHarvestStore
 
 
-def _fixture_query(root: Path, name: str, source: str) -> IngestionQuery:
+def _fixture_query(
+    root: Path,
+    name: str,
+    source: str,
+    *,
+    extra_sources: dict[str, str] | None = None,
+) -> IngestionQuery:
     root.mkdir()
     (root / "src").mkdir()
     (root / "src" / "index.ts").write_text(source, encoding="utf-8")
+    for relative_path, extra_source in (extra_sources or {}).items():
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(extra_source, encoding="utf-8")
     (root / "package.json").write_text(
         '{"name":"' + name + '","devDependencies":{"typescript":"^5.5.0"}}\n',
         encoding="utf-8",
@@ -88,3 +98,42 @@ def test_reharvest_is_idempotent_for_same_repository_revision(tmp_path: Path) ->
     assert first.records == second.records
     assert first.receipt.manifest_sha256 == second.receipt.manifest_sha256
     assert len(stored) == len(first.records)
+
+
+def test_parse_error_file_keeps_raw_file_evidence_and_warns(tmp_path: Path) -> None:
+    database = tmp_path / "corpus.sqlite3"
+    query = _fixture_query(
+        tmp_path / "partial",
+        "partial",
+        "export function healthy(): number { return 1; }\n",
+        extra_sources={"src/broken.ts": "export const broken = ;\n"},
+    )
+
+    result = harvest_into_corpus(query, database)
+
+    broken_file = [
+        record
+        for record in result.records
+        if record.path == "src/broken.ts" and record.unit_kind == "file"
+    ]
+    healthy_symbols = [
+        record
+        for record in result.records
+        if record.path == "src/index.ts" and record.unit_kind == "symbol:function"
+    ]
+
+    assert len(broken_file) == 1
+    assert broken_file[0].qualification_state == QualificationState.RAW
+    assert len(healthy_symbols) == 1
+    assert result.summary["semantic_skip_count"] == 1
+    assert result.summary["semantic_skipped_paths"] == ["src/broken.ts"]
+    assert result.summary["warnings"] == [
+        "semantic-extraction-skipped:src/broken.ts:typescript-parse-error"
+    ]
+    assert result.receipt.warnings == (
+        "semantic-extraction-skipped:src/broken.ts:typescript-parse-error",
+    )
+    assert all(
+        relationship.source_path != "src/broken.ts"
+        for relationship in result.relationships
+    )

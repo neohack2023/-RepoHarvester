@@ -22,6 +22,10 @@ _DECLARATION_KINDS = {
 }
 
 
+class TypeScriptParseError(ValueError):
+    """Raised when the pinned TypeScript grammar cannot parse a file exactly."""
+
+
 def _language_for_path(path: str) -> Language:
     """Select the deterministic Tree-sitter grammar from the file suffix."""
     return _TSX_LANGUAGE if path.lower().endswith(".tsx") else _TYPESCRIPT_LANGUAGE
@@ -38,7 +42,7 @@ def build_typescript_symbol_records(file_record: HarvestRecord) -> list[HarvestR
     tree = parser.parse(source)
     if tree.root_node.has_error:
         message = f"cannot deterministically extract symbols from parse-error file: {file_record.path}"
-        raise ValueError(message)
+        raise TypeScriptParseError(message)
 
     records: list[HarvestRecord] = []
     for node in tree.root_node.named_children:

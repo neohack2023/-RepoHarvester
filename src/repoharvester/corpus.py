@@ -16,7 +16,7 @@ from repoharvester.receipts import ExtractionReceipt, build_extraction_receipt, 
 from repoharvester.records import build_file_harvest_records
 from repoharvester.relationships import build_typescript_relationships
 from repoharvester.storage import SQLiteHarvestStore
-from repoharvester.symbols import build_typescript_symbol_records
+from repoharvester.symbols import TypeScriptParseError, build_typescript_symbol_records
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,13 @@ class CorpusHarvestResult:
     summary: dict[str, object]
 
 
+@dataclass(frozen=True)
+class _RecordBuildResult:
+    records: tuple[HarvestRecord, ...]
+    warnings: tuple[str, ...]
+    skipped_typescript_paths: tuple[str, ...]
+
+
 def _record_identity(record: HarvestRecord) -> tuple[str, str, str, str, str]:
     return (
         record.source_repository,
@@ -39,16 +46,29 @@ def _record_identity(record: HarvestRecord) -> tuple[str, str, str, str, str]:
     )
 
 
-def _build_records(query: IngestionQuery) -> tuple[HarvestRecord, ...]:
+def _build_records(query: IngestionQuery) -> _RecordBuildResult:
     file_records = build_file_harvest_records(query)
-    symbol_records = tuple(
-        symbol
-        for file_record in file_records
-        for symbol in build_typescript_symbol_records(file_record)
-    )
+    symbol_records: list[HarvestRecord] = []
+    warnings: list[str] = []
+    skipped_typescript_paths: list[str] = []
+
+    for file_record in file_records:
+        try:
+            symbol_records.extend(build_typescript_symbol_records(file_record))
+        except TypeScriptParseError:
+            skipped_typescript_paths.append(file_record.path)
+            warnings.append(
+                f"semantic-extraction-skipped:{file_record.path}:typescript-parse-error"
+            )
+
     license_records = build_repository_license_records(file_records)
     dependency_records = build_declared_dependency_records(file_records)
-    return tuple((*file_records, *symbol_records, *license_records, *dependency_records))
+    records = tuple((*file_records, *symbol_records, *license_records, *dependency_records))
+    return _RecordBuildResult(
+        records=records,
+        warnings=tuple(sorted(warnings)),
+        skipped_typescript_paths=tuple(sorted(skipped_typescript_paths)),
+    )
 
 
 def harvest_into_corpus(
@@ -62,11 +82,19 @@ def harvest_into_corpus(
 
     This operation is deliberately qualification-neutral. Every newly harvested
     record must remain RAW. Existing records for other repositories/revisions in
-    the database are preserved.
+    the database are preserved. Unsupported TypeScript syntax degrades semantic
+    coverage for the affected files only; file/provenance evidence is retained
+    and the omission is bound into the extraction receipt as an explicit warning.
     """
 
-    records = _build_records(query)
-    relationships = tuple(build_typescript_relationships(records))
+    build_result = _build_records(query)
+    records = build_result.records
+    relationships = tuple(
+        build_typescript_relationships(
+            records,
+            skip_source_paths=build_result.skipped_typescript_paths,
+        )
+    )
 
     if not records:
         raise RuntimeError("corpus harvest produced no records")
@@ -77,10 +105,11 @@ def harvest_into_corpus(
     if {record.qualification_state for record in records} != {QualificationState.RAW}:
         raise RuntimeError("generic corpus harvest must not promote records beyond RAW")
 
+    combined_warnings = tuple((*warnings, *build_result.warnings))
     receipt = build_extraction_receipt(
         records,
         relationships=relationships,
-        warnings=tuple(warnings),
+        warnings=combined_warnings,
         next_gate=next_gate,
     )
     if not verify_extraction_receipt(receipt, records, relationships=relationships):
@@ -119,6 +148,9 @@ def harvest_into_corpus(
         "manifest_sha256": receipt.manifest_sha256,
         "relationship_manifest_sha256": receipt.relationship_manifest_sha256,
         "receipt_verified": True,
+        "warnings": list(receipt.warnings),
+        "semantic_skip_count": len(build_result.skipped_typescript_paths),
+        "semantic_skipped_paths": list(build_result.skipped_typescript_paths),
         "qualification_state": "RAW",
         "qualification_performed": False,
         "corpus_database": str(Path(database_path)),
