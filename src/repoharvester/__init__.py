@@ -1,5 +1,6 @@
 """RepoHarvester evidence and knowledge-layer primitives."""
 
+from repoharvester.corpus import CorpusHarvestResult, harvest_into_corpus
 from repoharvester.dependencies import (
     DEPENDENCY_EVIDENCE_RULESET,
     DependencyEvidenceError,
@@ -42,6 +43,7 @@ from repoharvester.relationships import (
 from repoharvester.symbols import TYPESCRIPT_SYMBOL_RULESET, build_typescript_symbol_records
 
 __all__ = [
+    "CorpusHarvestResult",
     "DEPENDENCY_EVIDENCE_RULESET",
     "DependencyEvidenceError",
     "ExtractionReceipt",
@@ -68,6 +70,7 @@ __all__ = [
     "build_typescript_relationships",
     "build_typescript_symbol_records",
     "evaluate_raw_to_candidate",
+    "harvest_into_corpus",
     "load_extraction_receipt",
     "verify_extraction_receipt",
     "verify_qualification_receipt",
