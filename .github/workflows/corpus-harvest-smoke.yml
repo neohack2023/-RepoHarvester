@@ -28,9 +28,9 @@ jobs:
   harvest:
     runs-on: ubuntu-latest
     env:
-      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/nradawg/backoff-schedule.git' }}
-      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || 'f4ed89aca0618c169ed68ccb2a261df8b971f415' }}
-      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'backoff-schedule' }}
+      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/StoneCypher/jssm.git' }}
+      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || '1fabfde0fc8ab5f2984204a1551ef24bd7474675' }}
+      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'jssm' }}
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
