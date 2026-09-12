@@ -89,26 +89,32 @@ def build_typescript_relationships(
 
 
 def _root_tsconfig_alias_config(records: Iterable[HarvestRecord]) -> _TsconfigAliasConfig | None:
-    """Read strict-JSON root tsconfig baseUrl/paths without compiler emulation.
+    """Read one strict-JSON root tsconfig baseUrl/paths without compiler emulation.
 
-    Invalid or unsupported config shapes disable alias resolution rather than
-    guessing. Only the repository-root ``tsconfig.json`` is considered; extends,
-    package/workspace resolution, JSONC preprocessing, and compiler execution are
-    deliberately out of scope for this ruleset.
+    The bounded adapter activates only when ``tsconfig.json`` is the repository's
+    sole ``tsconfig*.json`` file. Multiple configs, ``extends``, and project
+    references require config-scope semantics that are intentionally deferred;
+    those repositories therefore keep non-relative imports EXTERNAL rather than
+    accepting a guessed root mapping. JSONC preprocessing, package/workspace
+    resolution, and compiler execution are also out of scope for this ruleset.
     """
-    configs = [
-        record
-        for record in records
-        if record.unit_kind == "file" and record.path == "tsconfig.json"
-    ]
-    if len(configs) != 1:
+    file_records = [record for record in records if record.unit_kind == "file"]
+    config_paths = sorted(
+        record.path
+        for record in file_records
+        if _is_tsconfig_json_path(record.path)
+    )
+    if config_paths != ["tsconfig.json"]:
         return None
 
+    config = next(record for record in file_records if record.path == "tsconfig.json")
     try:
-        payload = json.loads(configs[0].representation)
+        payload = json.loads(config.representation)
     except (TypeError, json.JSONDecodeError):
         return None
     if not isinstance(payload, dict):
+        return None
+    if "extends" in payload or payload.get("references"):
         return None
 
     compiler_options = payload.get("compilerOptions", {})
@@ -143,6 +149,11 @@ def _root_tsconfig_alias_config(records: Iterable[HarvestRecord]) -> _TsconfigAl
         paths.append((pattern, tuple(normalized_replacements)))
 
     return _TsconfigAliasConfig(base_url=base_url, paths=tuple(paths))
+
+
+def _is_tsconfig_json_path(path: str) -> bool:
+    name = posixpath.basename(path).lower()
+    return name.startswith("tsconfig") and name.endswith(".json")
 
 
 def _is_repository_local_path(path: str) -> bool:
