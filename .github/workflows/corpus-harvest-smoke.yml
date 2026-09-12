@@ -8,17 +8,17 @@ on:
       repository_url:
         description: Git clone URL to harvest
         required: true
-        default: https://github.com/nradawg/backoff-schedule.git
+        default: https://github.com/excalidraw/excalidraw.git
         type: string
       revision:
         description: Exact commit SHA or remote ref; leave blank to resolve remote HEAD
         required: false
-        default: f4ed89aca0618c169ed68ccb2a261df8b971f415
+        default: afa3a653fc5d2b742adcbd5a6063187b056d2419
         type: string
       output_slug:
         description: Directory/artifact-safe slug for this harvest
         required: true
-        default: backoff-schedule
+        default: excalidraw-alias-baseline
         type: string
 
 permissions:
@@ -28,9 +28,9 @@ jobs:
   harvest:
     runs-on: ubuntu-latest
     env:
-      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/nradawg/backoff-schedule.git' }}
-      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || 'f4ed89aca0618c169ed68ccb2a261df8b971f415' }}
-      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'backoff-schedule' }}
+      REPOSITORY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.repository_url || 'https://github.com/excalidraw/excalidraw.git' }}
+      REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.revision || 'afa3a653fc5d2b742adcbd5a6063187b056d2419' }}
+      OUTPUT_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.output_slug || 'excalidraw-alias-baseline' }}
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
