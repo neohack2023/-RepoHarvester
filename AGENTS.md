@@ -66,6 +66,21 @@ Do not introduce distributed databases, large vector infrastructure, autonomous 
 
 SQLite remains the default local database unless workload evidence proves otherwise.
 
+## Agent coordination
+
+Repository-level multi-agent coordination lives under `agents/`.
+
+- `agents/README.md` defines the coordination layout and authority order.
+- `agents/REGISTRY.yaml` defines stable roles and hard role boundaries.
+- `agents/PROTOCOL.md` defines task claims, parallelism, evidence, review, and handoff behavior.
+- `agents/tasks/` holds one bounded task dossier per active slice instead of one conflict-prone shared queue.
+- `agents/handoffs/` records ownership changes at an exact repository revision.
+- `agents/receipts/` stores lightweight coordination evidence only.
+
+The coordination layer does not create autonomous merge authority, does not widen feature scope, and does not replace product provenance, qualification receipts, tests, or checkpoints.
+
+Parallel agents require explicit task dossiers. Prefer non-overlapping write scopes. If write scopes overlap, the task dossier must name an integration owner and explain the boundary before implementation begins.
+
 ## Feature routing
 
 Feature-specific agent contracts live under `features/<feature>/AGENTS.md` and override this file only within their bounded feature responsibility.
