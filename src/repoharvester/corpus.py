@@ -63,7 +63,12 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
 
     license_records = build_repository_license_records(file_records)
     dependency_records = build_declared_dependency_records(file_records)
-    records = tuple((*file_records, *symbol_records, *license_records, *dependency_records))
+    records = tuple(
+        sorted(
+            (*file_records, *symbol_records, *license_records, *dependency_records),
+            key=_record_identity,
+        )
+    )
     return _RecordBuildResult(
         records=records,
         warnings=tuple(sorted(warnings)),
