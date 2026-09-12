@@ -26,6 +26,20 @@ def _file(path: str, source: str) -> HarvestRecord:
     )
 
 
+def _json_file(path: str, source: str) -> HarvestRecord:
+    digest = hashlib.sha256(source.encode()).hexdigest()
+    return HarvestRecord(
+        source_repository="repo",
+        source_revision="a" * 40,
+        path=path,
+        unit_kind="file",
+        language="JSON",
+        source_sha256=digest,
+        representation_sha256=digest,
+        representation=source,
+    )
+
+
 def test_builds_contains_and_import_edges_deterministically() -> None:
     a = _file(
         "src/a.ts",
@@ -58,20 +72,10 @@ def test_unresolved_relative_import_stays_unresolved() -> None:
     assert relationships[0].target_path == ""
 
 
-def test_tsconfig_alias_is_external_before_config_resolution_support() -> None:
-    tsconfig_source = (
-        '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}\n'
-    )
-    tsconfig_digest = hashlib.sha256(tsconfig_source.encode()).hexdigest()
-    tsconfig = HarvestRecord(
-        source_repository="repo",
-        source_revision="a" * 40,
-        path="tsconfig.json",
-        unit_kind="file",
-        language="JSON",
-        source_sha256=tsconfig_digest,
-        representation_sha256=tsconfig_digest,
-        representation=tsconfig_source,
+def test_root_tsconfig_alias_resolves_to_harvested_typescript_file() -> None:
+    tsconfig = _json_file(
+        "tsconfig.json",
+        '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}\n',
     )
     app = _file(
         "src/App.ts",
@@ -95,5 +99,46 @@ def test_tsconfig_alias_is_external_before_config_resolution_support() -> None:
 
     assert len(imports) == 1
     assert imports[0].literal_target == '"@/components/Button"'
+    assert imports[0].resolution_state == ResolutionState.EXACT
+    assert imports[0].target_path == "src/components/Button.ts"
+
+
+def test_unmatched_nonrelative_alias_stays_external() -> None:
+    tsconfig = _json_file(
+        "tsconfig.json",
+        '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}\n',
+    )
+    source = _file("src/App.ts", 'import x from "@unknown/Button";\n')
+
+    relationships = build_typescript_relationships([tsconfig, source])
+
+    assert len(relationships) == 1
+    assert relationships[0].resolution_state == ResolutionState.EXTERNAL
+    assert relationships[0].target_path == ""
+
+
+def test_matched_alias_without_harvested_target_is_unresolved() -> None:
+    tsconfig = _json_file(
+        "tsconfig.json",
+        '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}\n',
+    )
+    source = _file("src/App.ts", 'import x from "@/missing";\n')
+
+    relationships = build_typescript_relationships([tsconfig, source])
+
+    assert len(relationships) == 1
+    assert relationships[0].resolution_state == ResolutionState.UNRESOLVED
+    assert relationships[0].target_path == ""
+
+
+def test_invalid_root_tsconfig_fails_closed_to_external() -> None:
+    tsconfig = _json_file("tsconfig.json", "{not-json}\n")
+    source = _file("src/App.ts", 'import x from "@/components/Button";\n')
+    button = _file("src/components/Button.ts", "export const Button = 1;\n")
+
+    relationships = build_typescript_relationships([tsconfig, source, button])
+    imports = [item for item in relationships if item.relationship_kind == "imports"]
+
+    assert len(imports) == 1
     assert imports[0].resolution_state == ResolutionState.EXTERNAL
     assert imports[0].target_path == ""
