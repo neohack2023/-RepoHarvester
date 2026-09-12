@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  backoff-schedule:
+  calibration-corpus:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ".[dev]"
 
-      - name: Harvest pinned external repository into shared corpus
+      - name: Harvest backoff baseline into shared corpus
         run: |
           python scripts/run_corpus_harvest.py \
             https://github.com/nradawg/backoff-schedule.git \
@@ -34,9 +34,50 @@ jobs:
             --database acceptance/corpus/harvest.sqlite3 \
             --output-dir acceptance/corpus/backoff-schedule
 
+      - name: Harvest frontend clean architecture calibration target
+        run: |
+          python scripts/run_corpus_harvest.py \
+            https://github.com/bespoyasov/frontend-clean-architecture.git \
+            --revision f9ee6d94eef336dd77eb23b9344094c71bbfe47b \
+            --database acceptance/corpus/harvest.sqlite3 \
+            --output-dir acceptance/corpus/frontend-clean-architecture
+
+      - name: Verify shared corpus coexistence and RAW state
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from repoharvester.storage import SQLiteHarvestStore
+
+          db = Path("acceptance/corpus/harvest.sqlite3")
+          store = SQLiteHarvestStore(db)
+          targets = [
+              ("https://github.com/nradawg/backoff-schedule.git", "f4ed89aca0618c169ed68ccb2a261df8b971f415"),
+              ("https://github.com/bespoyasov/frontend-clean-architecture.git", "f9ee6d94eef336dd77eb23b9344094c71bbfe47b"),
+          ]
+          for repo, revision in targets:
+              records = store.query_records(source_repository=repo, source_revision=revision)
+              relationships = store.query_relationships(source_repository=repo, source_revision=revision)
+              states = sorted({record.qualification_state.value for record in records})
+              print(json.dumps({
+                  "repository": repo,
+                  "revision": revision,
+                  "records": len(records),
+                  "relationships": len(relationships),
+                  "qualification_states": states,
+              }, sort_keys=True))
+              assert records
+              assert states == ["RAW"]
+          for name in ("backoff-schedule", "frontend-clean-architecture"):
+              summary = json.loads(Path(f"acceptance/corpus/{name}/HARVEST_SUMMARY.json").read_text())
+              print(json.dumps({"summary": name, **summary}, sort_keys=True))
+              assert summary["receipt_verified"] is True
+              assert summary["source_worktree_clean"] is True
+          PY
+
       - name: Upload corpus evidence
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: backoff-schedule-corpus-evidence
+          name: frontend-clean-architecture-calibration-evidence
           path: acceptance/corpus/
           if-no-files-found: error
