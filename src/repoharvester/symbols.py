@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from typing import Optional
 
 import tree_sitter_c_sharp as tscsharp
 import tree_sitter_typescript as tstypescript
@@ -153,7 +154,7 @@ def _csharp_records_from_scope_node(
     return records
 
 
-def _csharp_name_node(node: Node) -> Node | None:
+def _csharp_name_node(node: Node) -> Optional[Node]:
     name_node = node.child_by_field_name("name")
     if name_node is not None:
         return name_node
@@ -180,7 +181,7 @@ def _record_for_node(
     file_record: HarvestRecord,
     ruleset: str,
     identity_prefix: str,
-    name_node: Node | None = None,
+    name_node: Optional[Node] = None,
 ) -> HarvestRecord:
     resolved_name_node = name_node or node.child_by_field_name("name")
     if resolved_name_node is None:
