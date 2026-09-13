@@ -1,9 +1,10 @@
 # Dependency integrity gate
 #
-# Public repositories can use GitHub's dependency-review API directly. On private
-# repositories where that API is unavailable without GitHub Advanced Security,
-# keep the workflow useful by installing the project and running pip's dependency
-# consistency check. This fallback is an integrity check, not a vulnerability scan.
+# GitHub's dependency-review API is not currently enabled for this repository.
+# Keep the required workflow meaningful and green only when the declared project
+# dependencies install consistently. This does NOT claim vulnerability-review
+# coverage. Re-enable actions/dependency-review-action when the repository's
+# dependency graph/security capability is explicitly available.
 name: 'Dependency Review'
 on: [pull_request]
 
@@ -11,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  dependency-review:
+  dependency-integrity:
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -22,22 +23,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Dependency Review
-        if: ${{ github.event.repository.private == false }}
-        uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
-
-      - name: Set up Python for private-repository fallback
-        if: ${{ github.event.repository.private == true }}
+      - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.13'
           cache: 'pip'
 
-      - name: Validate dependency integrity when GitHub review API is unavailable
-        if: ${{ github.event.repository.private == true }}
+      - name: Validate declared dependency integrity
         run: |
           python -m pip install --upgrade pip
           python -m pip install ".[dev,server]"
           python -m pip check
-          echo "GitHub dependency-review API is unavailable for this private repository."
-          echo "This fallback validates installability and dependency consistency; it does not claim vulnerability review coverage."
+          echo "Dependency integrity verified."
+          echo "Vulnerability-review coverage is not claimed while GitHub dependency review is unavailable."
