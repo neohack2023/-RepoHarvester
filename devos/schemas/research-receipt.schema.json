@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repo-harvester.local/schemas/research-receipt.schema.json",
+  "title": "RepoHarvester DevOS Research Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "research_id",
+    "trigger_task_ids",
+    "branch_keys",
+    "trigger_signals",
+    "questions",
+    "queries",
+    "sources",
+    "claims",
+    "uncertainties",
+    "inspirations",
+    "opportunities",
+    "no_op_reason",
+    "authority_effect",
+    "promotion_state"
+  ],
+  "properties": {
+    "research_id": {"type": "string", "pattern": "^REPOHARVESTER-RESEARCH-[0-9]{3}$"},
+    "trigger_task_ids": {"type": "array", "items": {"type": "string", "pattern": "^REPOHARVESTER-DEV-[0-9]{3}$"}, "uniqueItems": true},
+    "branch_keys": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+    "trigger_signals": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+    "questions": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "queries": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_ref", "source_class", "title", "published_or_updated", "retrieved_on"],
+        "properties": {
+          "source_ref": {"type": "string", "minLength": 1},
+          "source_class": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "published_or_updated": {"type": ["string", "null"]},
+          "retrieved_on": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement", "source_refs", "confidence", "fact_or_inference"],
+        "properties": {
+          "statement": {"type": "string", "minLength": 1},
+          "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+          "confidence": {"enum": ["LOW", "MEDIUM", "HIGH"]},
+          "fact_or_inference": {"enum": ["FACT", "INFERENCE"]}
+        }
+      }
+    },
+    "uncertainties": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "inspirations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["idea", "source_refs", "analogy_boundary"],
+        "properties": {
+          "idea": {"type": "string", "minLength": 1},
+          "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+          "analogy_boundary": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "opportunities": {"type": "array", "items": {"type": "string", "pattern": "^REPOHARVESTER-OPP-[0-9]{3}$"}, "uniqueItems": true},
+    "no_op_reason": {"type": ["string", "null"]},
+    "authority_effect": {"const": "NONE"},
+    "promotion_state": {"const": "CANDIDATE_ONLY"}
+  }
+}

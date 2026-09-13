@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "sync_id": "REPOHARVESTER-DEVOS-BOOTSTRAP-20260913",
+  "scope_key": "repo-harvester",
+  "repository": "neohack2023/-RepoHarvester",
+  "base_revision": "23fff62b3cfbc7c8d9878fdd6c51e5b34febc36d",
+  "source_reference": {
+    "repository": "neohack2023/project-orath",
+    "revision": "340e69d2156229188208cb4c5c181da7525175e9"
+  },
+  "operation": "devos_install",
+  "disposition": "LOCAL_BOOTSTRAP",
+  "uncertainties": [
+    "RepoHarvester Notion scope pointers were unavailable and remain explicitly unresolved."
+  ],
+  "created_at": "2026-09-13"
+}

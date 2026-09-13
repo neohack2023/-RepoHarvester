@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RepoHarvester STONE Manifest",
+  "type": "object",
+  "required": ["stone_manifest_id", "source_identity", "episode_boundary", "requested_transformation", "resolved_scope", "knowledge_branches", "included_artifacts", "excluded_sources", "retained_receipts", "rejected_receipts", "conflicts", "unresolved_questions", "provenance_map", "integrity_digest", "completion_state"],
+  "properties": {
+    "stone_manifest_id": {"type": "string"},
+    "source_identity": {"type": "string"},
+    "episode_boundary": {"type": "string"},
+    "requested_transformation": {"type": "string"},
+    "resolved_scope": {"const": "repo-harvester"},
+    "knowledge_branches": {"type": "array", "items": {"type": "string"}},
+    "included_artifacts": {"type": "array"},
+    "excluded_sources": {"type": "array"},
+    "retained_receipts": {"type": "array"},
+    "rejected_receipts": {"type": "array"},
+    "conflicts": {"type": "array"},
+    "unresolved_questions": {"type": "array"},
+    "provenance_map": {"type": "object"},
+    "integrity_digest": {"type": "string"},
+    "completion_state": {"enum": ["STONE_LOCKED", "STONE_UNLOCKED"]}
+  }
+}

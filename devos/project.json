@@ -1,0 +1,59 @@
+{
+  "schema_version": 5,
+  "scope_key": "repo-harvester",
+  "project_name": "RepoHarvester",
+  "chatgpt_project_name": "RepoHarvester — Code Intelligence Toolkit",
+  "research": {
+    "role": "RESEARCH-SCOUT",
+    "autonomous_preflight": true,
+    "public_research_without_user_prompt": true,
+    "policy": "devos/research-policy.json",
+    "contract": "devos/contracts/AUTONOMOUS_RESEARCH.md",
+    "planner": "tools/research_scout.py",
+    "opportunity_ledger": "devos/opportunities.jsonl",
+    "authority_effect": "NONE",
+    "promotion_state": "CANDIDATE_ONLY"
+  },
+  "authority": {
+    "repository_execution": "github",
+    "durable_project_memory": "notion",
+    "repository_runtime_context": "local_projection",
+    "intake_gate": "stone",
+    "assembly_gate": "mason"
+  },
+  "local_runtime": {
+    "knowledge_db": ".build/repoharvester-knowledge.db",
+    "database_contract": "devos/contracts/RUNTIME_DB.md",
+    "connection_policy": "tools/db_runtime.py",
+    "database_schema_version": 2,
+    "governance_snapshot": "knowledge/governance_snapshot.json",
+    "governance_lock": "devos/governance-lock.json",
+    "query_tool": "tools/knowledge_runtime.py",
+    "feedback_table": "system_feedback",
+    "tool_registry": "devos/tools.jsonl",
+    "task_manifest": "devos/tasks.jsonl",
+    "opportunity_manifest": "devos/opportunities.jsonl",
+    "research_receipt_root": "devos/receipts",
+    "runtime_learning_store": "unified"
+  },
+  "notion": {
+    "memory_root": "UNRESOLVED",
+    "project_handoff": "UNRESOLVED",
+    "retrieval_index": "UNRESOLVED",
+    "knowledge_branch_registry": "UNRESOLVED",
+    "scope_registry_record": "UNRESOLVED",
+    "stone_skill": "AI_MEMORY_OS:STONE",
+    "mason_ledger": "AI_MEMORY_OS:MASON",
+    "runtime_use": "explicit_sync_only"
+  },
+  "governance": {
+    "normal_repo_work_external_fetch_required": false,
+    "prevalence_can_upgrade_authority": false,
+    "upstream_sync_contract": "devos/contracts/UPSTREAM_SYNC.md",
+    "self_improvement_contract": "devos/contracts/SELF_IMPROVEMENT.md",
+    "governance_lock": "devos/governance-lock.json"
+  },
+  "default_agent": "REPOHARVESTER-DEV-ORCHESTRATOR",
+  "branch_registry": "devos/branches.jsonl",
+  "bootstrap_status": "installed"
+}
