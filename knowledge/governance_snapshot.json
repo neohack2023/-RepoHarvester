@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "REPOHARVESTER-DEVOS-BOOTSTRAP-20260913",
+  "scope_key": "repo-harvester",
+  "materialized_on": "2026-09-13",
+  "source_repository_head": "23fff62b3cfbc7c8d9878fdd6c51e5b34febc36d",
+  "upstream_system": "notion",
+  "upstream_refs": {
+    "status": "UNRESOLVED"
+  },
+  "project_state": {
+    "status": "Active",
+    "bootstrap_status": "Installed",
+    "current_frontier": "TAGGING_GATE_01",
+    "repository_agent_runtime": "checked-in governance projection plus .build/repoharvester-knowledge.db"
+  },
+  "claims": [
+    {
+      "claim_id": "repo-live-execution-authority",
+      "branch_key": "project-core",
+      "statement": "GitHub main is authoritative for RepoHarvester implementation and execution facts.",
+      "authority_class": "RATIFIED_SYSTEM_AUTHORITY",
+      "lifecycle": "canon",
+      "status": "active",
+      "source_system": "repository_contract",
+      "source_ref": "repo:AGENTS.md",
+      "evidence": [
+        {
+          "independence_key": "repo-main",
+          "ref": "repo:AGENTS.md"
+        }
+      ],
+      "verified_at": "2026-09-13",
+      "valid_through": null,
+      "supersedes": []
+    },
+    {
+      "claim_id": "repo-current-frontier",
+      "branch_key": "qualification-lifecycle",
+      "statement": "The bounded frontier on the inspected main revision is TAGGING_GATE_01 after Checkpoint 7.",
+      "authority_class": "ACCEPTED_ARTIFACT_EVIDENCE",
+      "lifecycle": "accepted",
+      "status": "active",
+      "source_system": "repository_checkpoint",
+      "source_ref": "repo:CHECKPOINT.md",
+      "evidence": [
+        {
+          "independence_key": "repo-main",
+          "ref": "git:23fff62b3cfbc7c8d9878fdd6c51e5b34febc36d"
+        }
+      ],
+      "verified_at": "2026-09-13",
+      "valid_through": null,
+      "supersedes": []
+    }
+  ]
+}

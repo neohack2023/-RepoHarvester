@@ -1,0 +1,12 @@
+{
+  "schema": "repoharvester-devos-learning-threshold-schema/v1",
+  "required": ["schema", "issue", "goal", "components", "required_transfer_tier", "canary_tier", "authority_effect", "promotion_state", "governed_promotion_path"],
+  "constants": {
+    "schema": "repoharvester-devos-learning-threshold/v1",
+    "required_transfer_tier": "T3",
+    "canary_tier": "T5",
+    "authority_effect": "NONE",
+    "promotion_state": "CANDIDATE_ONLY",
+    "governed_promotion_path": ["STONE", "MASON", "PR", "CI", "CANARY"]
+  }
+}

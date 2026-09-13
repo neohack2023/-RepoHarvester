@@ -114,3 +114,9 @@ For `TAGGING_GATE_01`:
 Likely follow-up after a proven tagging gate is a bounded `VERIFICATION_GATE_01` or `CROSS_REPO_COMPARISON_01`, chosen from demonstrated workflow need rather than roadmap momentum. A second language should be added only when a concrete target requires it.
 
 Do not add semantic ranking, vectors, distributed infrastructure, or automatic promotion as part of the current frontier.
+
+## Development OS routing
+
+For durable knowledge changes, research promotion, cross-feature work, repository-memory synchronization, or DevOS changes, read `devos/AGENTS.md` and resolve the smallest branch in `devos/branches.jsonl`.
+
+Normal repository work uses the checked-in governance projection and `.build/repoharvester-knowledge.db`. Verify it with `python tools/build_knowledge_db.py --check`; validate routing with `python tools/validate_devos.py`. Live upstream memory retrieval is limited to `devos/governance-lock.json` triggers.

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "receipt_id": "DEVOS-SELF-IMPROVEMENT-20260913-001",
+  "scope_key": "repo-harvester",
+  "branch_key": "tooling-agent-harness",
+  "source_episode": "PR22-DEVOS-INSTALL",
+  "lifecycle_state": "VERIFIED_LOCAL_DISCOVERY",
+  "observations": [
+    {
+      "signature": "governance-hash-line-ending-sensitive",
+      "evidence_ref": "github:run:34781113174",
+      "mechanism": "Raw-byte hashes changed when Git converted LF governance artifacts to CRLF on Windows."
+    },
+    {
+      "signature": "reflection-direct-entrypoint-import-failure",
+      "evidence_ref": "pr:22:local-validation",
+      "mechanism": "Reflection adapters imported tools.reflection_core while documented direct script execution places tools/ rather than the repository root on sys.path."
+    },
+    {
+      "signature": "source-project-assumption-leak-risk",
+      "evidence_ref": "pr:22:port-review",
+      "mechanism": "A reusable DevOS port can retain source-project vocabulary in executable contracts unless installation validation checks it explicitly."
+    }
+  ],
+  "changes": [
+    "Canonicalize governance text to LF before hashing.",
+    "Support both package and direct execution imports for reflection adapters.",
+    "Validate configured source-project terms outside explicit provenance files."
+  ],
+  "validation": [
+    "python tools/validate_devos.py",
+    "python tools/build_knowledge_db.py --check",
+    "python -m unittest tests.test_devos_runtime -v",
+    "python tools/diagnostic_reflection.py --help",
+    "python tools/delta_reflection.py --help",
+    "git diff --check"
+  ],
+  "authority_effect": "NONE",
+  "promotion": "Requires reviewed PR and CI; does not self-promote operating authority.",
+  "memory_sync": "NOOP_PENDING_REVIEW"
+}

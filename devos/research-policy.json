@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "role": "RESEARCH-SCOUT",
+  "contract": "devos/contracts/AUTONOMOUS_RESEARCH.md",
+  "autonomous_preflight": true,
+  "authority_effect": "NONE",
+  "promotion_state": "CANDIDATE_ONLY",
+  "default_budget": {
+    "max_queries": 8,
+    "max_sources": 12,
+    "min_source_classes": 2,
+    "max_opportunities": 5
+  },
+  "freshness_days": {
+    "current_api_behavior": 60,
+    "engine_version_capability": 60,
+    "browser_constraint": 60,
+    "tooling_behavior": 90,
+    "design_reference": 1825,
+    "postmortem": 3650
+  },
+  "automatic_task_types": [
+    "research",
+    "cross_branch_architecture",
+    "feature_incubation"
+  ],
+  "automatic_branch_keys": [
+    "runtime-engine"
+  ],
+  "browser_external_keywords": [
+    "browser",
+    "runtime",
+    "engine",
+    "save",
+    "storage",
+    "indexeddb",
+    "webassembly",
+    "webgl",
+    "webgpu",
+    "network",
+    "audio",
+    "gamepad",
+    "pointer",
+    "fullscreen",
+    "performance",
+    "localization",
+    "cache",
+    "offline"
+  ],
+  "explicit_signals": [
+    "blocker",
+    "capability-gap",
+    "stale-source",
+    "weak-comparison",
+    "design-dead-end",
+    "external-uncertainty",
+    "opportunity-window"
+  ],
+  "research_lanes": [
+    "CURRENT_STATE",
+    "IMPLEMENTATIONS",
+    "FAILURE_MODES",
+    "ADJACENT_DESIGN",
+    "OPPORTUNITY"
+  ],
+  "source_policy": {
+    "evidence_preference": [
+      "standard",
+      "primary_documentation",
+      "source_repository",
+      "release_notes",
+      "research_paper",
+      "maintainer_engineering_note",
+      "reproducible_benchmark"
+    ],
+    "inspiration_allowed": [
+      "game_postmortem",
+      "conference_talk",
+      "design_analysis",
+      "open_source_game",
+      "community_discussion",
+      "developer_anecdote"
+    ],
+    "primary_source_required_for": [
+      "current_api_behavior",
+      "engine_version_capability",
+      "browser_constraint",
+      "license_or_policy"
+    ]
+  },
+  "opportunity_ledger": "devos/opportunities.jsonl",
+  "research_receipt_schema": "devos/schemas/research-receipt.schema.json",
+  "opportunity_schema": "devos/schemas/research-opportunity.schema.json"
+}

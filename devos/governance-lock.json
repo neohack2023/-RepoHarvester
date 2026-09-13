@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "bundle_id": "REPOHARVESTER_REPOSITORY_GOVERNANCE_BUNDLE_01",
+  "bundle_version": 1,
+  "state": "active",
+  "materialized_on": "2026-09-13",
+  "valid_through": "2026-10-13",
+  "normal_repo_work_external_fetch_required": false,
+  "upstream_authority_cutover": false,
+  "local_runtime": {
+    "branch_registry": "devos/branches.jsonl",
+    "governance_snapshot": "knowledge/governance_snapshot.json",
+    "knowledge_db": ".build/repoharvester-knowledge.db",
+    "query_tool": "tools/knowledge_runtime.py"
+  },
+  "projection_sha256": "sha256:28102a648b8fa406433f158cdf3b3fb10dbf0395e6d30fa967afa6184bc1617e",
+  "sync_state": "bootstrap",
+  "sync_contract": "devos/contracts/UPSTREAM_SYNC.md",
+  "sync_receipt_root": "devos/sync/receipts",
+  "last_sync_id": "REPOHARVESTER-DEVOS-BOOTSTRAP-20260913",
+  "last_sync_receipt": "devos/sync/receipts/REPOHARVESTER-DEVOS-BOOTSTRAP-20260913.json",
+  "last_sync_receipt_sha256": "sha256:58c21476daccb418b9bcd5dfae7727f97c7c6722120cac946f4aa2898f49992c",
+  "last_upstream_sync": "2026-09-13",
+  "sync_freshness_days": 30,
+  "external_fetch_triggers": [
+    "owner_requests_upstream_sync",
+    "unresolved_authority_conflict",
+    "bundle_missing_required_claim_for_material_task",
+    "governance_lock_expired_for_authority_sensitive_task"
+  ],
+  "staleness_behavior": {
+    "authority_sensitive_promotion": "require_bounded_upstream_sync_when_triggered",
+    "normal_repository_execution": "continue_from_local_bundle",
+    "projection_age_is_authority_downgrade": false,
+    "review_flag_on_age_alone": false
+  },
+  "prevalence_policy": {
+    "independent_support_is_tracked_separately": true,
+    "prevalence_can_upgrade_authority": false,
+    "support_counts_are_retrieval_evidence": true
+  },
+  "live_repository_facts_source": "github",
+  "durable_project_memory_source": "notion",
+  "repository_runtime_context_source": "local_projection"
+}
