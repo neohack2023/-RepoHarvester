@@ -64,7 +64,9 @@ def _record_identity(record: HarvestRecord) -> tuple[str, str, str, str, str]:
     )
 
 
-def _records_by_identity(records: list[HarvestRecord] | tuple[HarvestRecord, ...]) -> dict[tuple[str, str, str, str, str], HarvestRecord]:
+def _records_by_identity(
+    records: list[HarvestRecord] | tuple[HarvestRecord, ...],
+) -> dict[tuple[str, str, str, str, str], HarvestRecord]:
     return {_record_identity(record): record for record in records}
 
 
