@@ -2,6 +2,7 @@
   "schema_version": 5,
   "scope_key": "repo-harvester",
   "project_name": "RepoHarvester",
+  "repository": "neohack2023/-RepoHarvester",
   "chatgpt_project_name": "RepoHarvester — Code Intelligence Toolkit",
   "research": {
     "role": "RESEARCH-SCOUT",

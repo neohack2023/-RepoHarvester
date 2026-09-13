@@ -63,7 +63,7 @@ def load_project() -> dict:
         raise ValueError(f"project.json missing: {', '.join(missing)}")
     if project["scope_key"] != "repo-harvester":
         raise ValueError("project.json scope_key must be repo-harvester")
-    if project["repository"] != "neohack2023/repo-harvester":
+    if project["repository"] != "neohack2023/-RepoHarvester":
         raise ValueError("project.json repository mismatch")
     if project["branch_registry"] != "devos/branches.jsonl":
         raise ValueError("project.json branch_registry mismatch")
@@ -293,9 +293,10 @@ def validate() -> tuple[int, list[str]]:
                 errors.append(f"{key}: feature branch must point at docs/features/<feature>")
             for feature_root in feature_roots:
                 if feature_root.is_dir():
-                    for required in ("README.md", "AGENTS.md"):
-                        if not (feature_root / required).exists():
-                            errors.append(f"{key}: missing local {required}")
+                    if not (feature_root / "AGENTS.md").exists():
+                        errors.append(f"{key}: missing local AGENTS.md")
+                    if not any((feature_root / name).exists() for name in ("README.md", "FEATURE.md")):
+                        errors.append(f"{key}: missing local README.md or FEATURE.md")
 
     validate_tools(tools, errors)
     validate_local_runtime(project, lock, errors)

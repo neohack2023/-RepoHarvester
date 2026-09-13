@@ -13,13 +13,13 @@
     "knowledge_db": ".build/repoharvester-knowledge.db",
     "query_tool": "tools/knowledge_runtime.py"
   },
-  "projection_sha256": "BOOTSTRAP_UNVERIFIED",
+  "projection_sha256": "sha256:28102a648b8fa406433f158cdf3b3fb10dbf0395e6d30fa967afa6184bc1617e",
   "sync_state": "bootstrap",
   "sync_contract": "devos/contracts/UPSTREAM_SYNC.md",
   "sync_receipt_root": "devos/sync/receipts",
   "last_sync_id": "REPOHARVESTER-DEVOS-BOOTSTRAP-20260913",
   "last_sync_receipt": "devos/sync/receipts/REPOHARVESTER-DEVOS-BOOTSTRAP-20260913.json",
-  "last_sync_receipt_sha256": "BOOTSTRAP_UNVERIFIED",
+  "last_sync_receipt_sha256": "sha256:58c21476daccb418b9bcd5dfae7727f97c7c6722120cac946f4aa2898f49992c",
   "last_upstream_sync": "2026-09-13",
   "sync_freshness_days": 30,
   "external_fetch_triggers": [

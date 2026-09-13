@@ -201,13 +201,18 @@ def insert_documents(connection: sqlite3.Connection) -> int:
         relative = path.relative_to(ROOT).as_posix()
         title = first_heading(text, path.stem)
         kind = "root" if path.parent == ROOT else "documentation"
+        section_counts: dict[str, int] = {}
         for section, content in markdown_sections(text):
+            section_counts[section] = section_counts.get(section, 0) + 1
+            stored_section = section
+            if section_counts[section] > 1:
+                stored_section = f"{section} [{section_counts[section]}]"
             connection.execute(
                 """
                 INSERT INTO documents(path, title, section, content, content_hash, kind)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (relative, title, section, content, sha256_text(content), kind),
+                (relative, title, stored_section, content, sha256_text(content), kind),
             )
             document_count += 1
     return document_count
