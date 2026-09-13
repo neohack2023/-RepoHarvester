@@ -30,7 +30,11 @@ _TEST_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
 # Generate cartesian product of repository tuples with URL variants.
-@pytest.mark.parametrize(("host", "user", "repo"), _REPOS, ids=[f"{h}:{u}/{r}" for h, u, r in _REPOS])
+@pytest.mark.parametrize(
+    ("host", "user", "repo"),
+    _REPOS,
+    ids=[f"{h}:{u}/{r}" for h, u, r in _REPOS],
+)
 @pytest.mark.parametrize("variant", ["full", "noscheme", "slug"])
 @pytest.mark.asyncio
 async def test_parse_query_without_host(
