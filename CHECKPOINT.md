@@ -275,3 +275,19 @@
   unit. Require explicit functional/architectural classification evidence with provenance; preserve disagreements and
   unknowns; do not jump to `VERIFIED` or `REUSABLE`, and do not introduce a generic scoring or policy engine.
 - Resume: re-check GitHub `main`, exact head, and this checkpoint evidence before beginning tagging work.
+
+
+## Checkpoint 8 — repository-local DevOS installation and first self-improvement
+
+- Date: 2026-09-13
+- Installation merge on `main`: `b64653de48e9581f806810f1d2e45ae0af2e1ea6` (PR #22).
+- Source reference: `neohack2023/project-orath` at exact revision `340e69d2156229188208cb4c5c181da7525175e9`.
+- Maturity: RepoHarvester now has an executable repository-local DevOS layer rather than agent instructions alone. It includes branch routing, a unified SQLite knowledge runtime, task and opportunity ledgers, bounded research preflight, reflection/learning tools, STONE/MASON contracts, governance validation, CI, and installation receipts.
+- Repo adaptation: six knowledge branches route project core, code units, relationships, storage, qualification lifecycle, and tooling/agent-harness work. GitHub remains live execution authority. RepoHarvester-specific Notion coordinates remain explicitly `UNRESOLVED`; authority-sensitive upstream promotion must stop for bounded synchronization rather than inventing pointers.
+- Self-improvement evidence: the installation episode exposed Windows line-ending sensitivity in governance hashes, direct-execution import failures in reflection adapters, and source-project vocabulary leak risk. PR #22 canonicalized governance text hashes to LF, repaired documented direct reflection entrypoints, and added configured leakage validation. Receipt: `devos/receipts/DEVOS-SELF-IMPROVEMENT-20260913-001.json`.
+- Validation: `DevOS checks`, `External Acceptance`, `Corpus Harvest Smoke`, CodeQL, container build, and conventional-commit validation passed on PR head `f8bad5dde8f126ea78c22ee99619b4ca01f99e06`. Local DevOS validation passed with six branches; knowledge DB build/check passed; all six focused DevOS tests passed; reflection entrypoint smoke tests and Python compilation passed.
+- Existing CI baseline: broad CI still reports five inherited live-host failures involving Bitbucket authentication/GitLab HTTP 418 plus the existing shared-corpus record-order assertion. Dependency Review remains non-executable because the repository lacks the required dependency-graph/security-analysis capability. These did not originate in the DevOS installation.
+- Authority effect: the self-improvement receipt is `VERIFIED_LOCAL_DISCOVERY`. It does not self-promote global DevOS authority or rewrite upstream memory.
+- Qualification: CHECKPOINT 8 REACHED for repository-local DevOS installation and one evidence-backed self-improvement cycle.
+- Product frontier: `TAGGING_GATE_01` remains the next RepoHarvester lifecycle slice. The corpus ordering defect should be repaired independently as the narrowest demonstrated product defect.
+- Resume: re-check GitHub `main`, this checkpoint, `devos/governance-lock.json`, and the smallest relevant row in `devos/branches.jsonl` before new work.
