@@ -40,9 +40,18 @@ from repoharvester.relationships import (
     TYPESCRIPT_RELATIONSHIP_RULESET,
     build_typescript_relationships,
 )
-from repoharvester.symbols import TYPESCRIPT_SYMBOL_RULESET, build_typescript_symbol_records
+from repoharvester.symbols import (
+    CSHARP_SYMBOL_RULESET,
+    TYPESCRIPT_SYMBOL_RULESET,
+    CSharpParseError,
+    TypeScriptParseError,
+    build_csharp_symbol_records,
+    build_typescript_symbol_records,
+)
 
 __all__ = [
+    "CSHARP_SYMBOL_RULESET",
+    "CSharpParseError",
     "CorpusHarvestResult",
     "DEPENDENCY_EVIDENCE_RULESET",
     "DependencyEvidenceError",
@@ -60,7 +69,9 @@ __all__ = [
     "ResolutionState",
     "TYPESCRIPT_RELATIONSHIP_RULESET",
     "TYPESCRIPT_SYMBOL_RULESET",
+    "TypeScriptParseError",
     "apply_candidate_qualification",
+    "build_csharp_symbol_records",
     "build_declared_dependency_records",
     "build_evidence_tree",
     "build_extraction_receipt",
