@@ -41,4 +41,4 @@ The orchestrator should select the smallest registered capability that lawfully 
 
 ## Current fixture
 
-`repo-harvester` is registered after the Daggerfall Unity canary. It is verified for repository/file provenance and deterministic TypeScript semantic extraction. C# semantic code-unit extraction remains explicitly unsupported, so C# targets may only use the proven file/provenance layer until RepoHarvester earns that capability.
+`repo-harvester` is self-registered from its accepted checkpoints. It is verified for repository/file provenance and deterministic TypeScript semantic extraction. C# semantic code-unit extraction remains explicitly unsupported until its open implementation slice is merged and verified.

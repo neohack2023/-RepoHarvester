@@ -101,12 +101,10 @@ def load_tasks(path: Path = TASK_FILE, event_path: Path | None = TASK_EVENT_FILE
 
 def load_delivery(path: Path = PROJECT_FILE) -> dict:
     project = json.loads(path.read_text(encoding="utf-8"))
-    delivery = project.get("delivery") or {}
-    if delivery.get("primary_runtime_target") != "browser":
-        raise ValueError("RepoHarvester primary runtime target must be browser")
-    if not delivery.get("contract"):
-        raise ValueError("browser delivery contract is required")
-    return delivery
+    return project.get("delivery") or {
+        "primary_runtime_target": "repository",
+        "contract": "AGENTS.md",
+    }
 
 
 def task_index(tasks: Iterable[dict]) -> dict[str, dict]:

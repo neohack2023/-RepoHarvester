@@ -128,7 +128,7 @@ Repetition never self-promotes. The system may nominate a candidate, but MASON p
 - Never let high prevalence/repetition upgrade authority.
 - Never bypass feature-local orchestrators for feature-owned semantics.
 - Never use one global context packet when a branch packet can answer the task.
-- Preserve deterministic County Zero tests and existing feature promotion gates.
+- Preserve RepoHarvester's deterministic evidence tests and existing lifecycle gates.
 
 ## Cross-branch changes
 
@@ -168,4 +168,4 @@ python tools/research_scout.py validate-opportunities
 python -m unittest discover -s tests -v
 ```
 
-Run the County Zero seed sweep for generation changes.
+Run the pinned external acceptance workflow when harvesting behavior changes.

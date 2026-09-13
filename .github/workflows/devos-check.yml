@@ -18,3 +18,4 @@ jobs:
           python-version: "3.12"
       - run: python tools/validate_devos.py
       - run: python tools/build_knowledge_db.py --check
+      - run: python -m unittest tests.test_devos_runtime -v
