@@ -1,11 +1,9 @@
-# Dependency Review Action
+# Dependency integrity gate
 #
-# This Action will scan dependency manifest files that change as part of a Pull Request,
-# surfacing known-vulnerable versions of the packages declared or updated in the PR.
-# Once installed, if the workflow run is marked as required,
-# PRs introducing known-vulnerable packages will be blocked from merging.
-#
-# Source repository: https://github.com/actions/dependency-review-action
+# Public repositories can use GitHub's dependency-review API directly. On private
+# repositories where that API is unavailable without GitHub Advanced Security,
+# keep the workflow useful by installing the project and running pip's dependency
+# consistency check. This fallback is an integrity check, not a vulnerability scan.
 name: 'Dependency Review'
 on: [pull_request]
 
@@ -21,7 +19,25 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: 'Checkout Repository'
+      - name: Checkout Repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: 'Dependency Review'
+
+      - name: Dependency Review
+        if: ${{ github.event.repository.private == false }}
         uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
+
+      - name: Set up Python for private-repository fallback
+        if: ${{ github.event.repository.private == true }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Validate dependency integrity when GitHub review API is unavailable
+        if: ${{ github.event.repository.private == true }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev,server]"
+          python -m pip check
+          echo "GitHub dependency-review API is unavailable for this private repository."
+          echo "This fallback validates installability and dependency consistency; it does not claim vulnerability review coverage."
