@@ -16,7 +16,12 @@ from repoharvester.receipts import ExtractionReceipt, build_extraction_receipt, 
 from repoharvester.records import build_file_harvest_records
 from repoharvester.relationships import build_typescript_relationships
 from repoharvester.storage import SQLiteHarvestStore
-from repoharvester.symbols import TypeScriptParseError, build_typescript_symbol_records
+from repoharvester.symbols import (
+    CSharpParseError,
+    TypeScriptParseError,
+    build_csharp_symbol_records,
+    build_typescript_symbol_records,
+)
 
 
 @dataclass(frozen=True)
@@ -34,6 +39,7 @@ class _RecordBuildResult:
     records: tuple[HarvestRecord, ...]
     warnings: tuple[str, ...]
     skipped_typescript_paths: tuple[str, ...]
+    skipped_csharp_paths: tuple[str, ...]
 
 
 def _record_identity(record: HarvestRecord) -> tuple[str, str, str, str, str]:
@@ -51,6 +57,7 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
     symbol_records: list[HarvestRecord] = []
     warnings: list[str] = []
     skipped_typescript_paths: list[str] = []
+    skipped_csharp_paths: list[str] = []
 
     for file_record in file_records:
         try:
@@ -61,6 +68,14 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
                 f"semantic-extraction-skipped:{file_record.path}:typescript-parse-error"
             )
 
+        try:
+            symbol_records.extend(build_csharp_symbol_records(file_record))
+        except CSharpParseError:
+            skipped_csharp_paths.append(file_record.path)
+            warnings.append(
+                f"semantic-extraction-skipped:{file_record.path}:csharp-parse-error"
+            )
+
     license_records = build_repository_license_records(file_records)
     dependency_records = build_declared_dependency_records(file_records)
     records = tuple((*file_records, *symbol_records, *license_records, *dependency_records))
@@ -68,6 +83,7 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
         records=records,
         warnings=tuple(sorted(warnings)),
         skipped_typescript_paths=tuple(sorted(skipped_typescript_paths)),
+        skipped_csharp_paths=tuple(sorted(skipped_csharp_paths)),
     )
 
 
@@ -81,10 +97,10 @@ def harvest_into_corpus(
     """Harvest one exact checkout and upsert it into a shared SQLite corpus.
 
     This operation is deliberately qualification-neutral. Every newly harvested
-    record must remain RAW. Existing records for other repositories/revisions in
-    the database are preserved. Unsupported TypeScript syntax degrades semantic
-    coverage for the affected files only; file/provenance evidence is retained
-    and the omission is bound into the extraction receipt as an explicit warning.
+    record must remain RAW. Unsupported parser syntax degrades semantic coverage
+    for affected supported-language files only; file/provenance evidence is
+    retained and each omission is bound into the extraction receipt as an
+    explicit warning.
     """
 
     build_result = _build_records(query)
@@ -135,6 +151,9 @@ def harvest_into_corpus(
     languages = Counter(record.language or "unknown" for record in records)
     relationship_kinds = Counter(item.relationship_kind for item in relationships)
     resolution_states = Counter(item.resolution_state.value for item in relationships)
+    semantic_skipped_paths = tuple(
+        sorted((*build_result.skipped_typescript_paths, *build_result.skipped_csharp_paths))
+    )
 
     summary: dict[str, object] = {
         "source_repository": query.url,
@@ -149,8 +168,8 @@ def harvest_into_corpus(
         "relationship_manifest_sha256": receipt.relationship_manifest_sha256,
         "receipt_verified": True,
         "warnings": list(receipt.warnings),
-        "semantic_skip_count": len(build_result.skipped_typescript_paths),
-        "semantic_skipped_paths": list(build_result.skipped_typescript_paths),
+        "semantic_skip_count": len(semantic_skipped_paths),
+        "semantic_skipped_paths": list(semantic_skipped_paths),
         "qualification_state": "RAW",
         "qualification_performed": False,
         "corpus_database": str(Path(database_path)),
