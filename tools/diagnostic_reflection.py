@@ -15,12 +15,14 @@ from pathlib import Path
 import sys
 from typing import Mapping, Sequence
 
-from tools.reflection_core import (
-    build_reflection_core,
-    canonical_digest,
-    required_text,
-    string_list,
-)
+try:
+    from tools.reflection_core import (
+        build_reflection_core, canonical_digest, required_text, string_list,
+    )
+except ModuleNotFoundError:  # Support documented direct script execution.
+    from reflection_core import (
+        build_reflection_core, canonical_digest, required_text, string_list,
+    )
 
 FAILURE_SCHEMA = "repoharvester-ci-failure/v1"
 SIGNAL_NORMALIZATION_VERSION = "repoharvester-ci-signal/v1"

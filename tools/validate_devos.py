@@ -48,7 +48,26 @@ REQUIRED_CAPABILITY_FIELDS = {"name", "scope", "languages", "qualification"}
 
 
 def sha256_file(path: Path) -> str:
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    text = path.read_text(encoding="utf-8")
+    canonical = text.replace("\r\n", "\n").replace("\r", "\n")
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def find_source_leaks(
+    root: Path, forbidden_terms: list[str], allowed_paths: list[str]
+) -> list[str]:
+    allowed = set(allowed_paths)
+    leaks: list[str] = []
+    for base in (root / "devos", root / "tools"):
+        for path in sorted(item for item in base.rglob("*") if item.is_file()):
+            relative = path.relative_to(root).as_posix()
+            if relative in allowed or path.suffix not in {".md", ".json", ".jsonl", ".py"}:
+                continue
+            text = path.read_text(encoding="utf-8").casefold()
+            for term in forbidden_terms:
+                if term.casefold() in text:
+                    leaks.append(f"{relative}: inherited source-project term {term!r}")
+    return leaks
 
 
 def load_project() -> dict:
@@ -254,6 +273,12 @@ def validate() -> tuple[int, list[str]]:
     branches = load_branches()
     tools = load_tools()
     errors: list[str] = []
+    portability = project.get("portability", {})
+    errors.extend(find_source_leaks(
+        ROOT,
+        portability.get("forbidden_source_terms", []),
+        portability.get("allowed_provenance_paths", []),
+    ))
     keys = [row["branch_key"] for row in branches]
     known = set(keys)
     if len(keys) != len(known):

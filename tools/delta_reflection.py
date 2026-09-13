@@ -15,11 +15,10 @@ from pathlib import Path
 import sys
 from typing import Mapping, Sequence
 
-from tools.reflection_core import (
-    build_reflection_core,
-    canonical_digest,
-    required_text,
-)
+try:
+    from tools.reflection_core import build_reflection_core, canonical_digest, required_text
+except ModuleNotFoundError:  # Support documented direct script execution.
+    from reflection_core import build_reflection_core, canonical_digest, required_text
 
 DELTA_REFLECTION_SCHEMA = "repoharvester-delta-reflection-candidate/v1"
 DELTA_IDENTITY_FIELDS = (

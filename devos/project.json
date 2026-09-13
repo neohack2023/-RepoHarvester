@@ -3,7 +3,7 @@
   "scope_key": "repo-harvester",
   "project_name": "RepoHarvester",
   "repository": "neohack2023/-RepoHarvester",
-  "chatgpt_project_name": "RepoHarvester — Code Intelligence Toolkit",
+  "chatgpt_project_name": "RepoHarvester \u2014 Code Intelligence Toolkit",
   "research": {
     "role": "RESEARCH-SCOUT",
     "autonomous_preflight": true,
@@ -56,5 +56,19 @@
   },
   "default_agent": "REPOHARVESTER-DEV-ORCHESTRATOR",
   "branch_registry": "devos/branches.jsonl",
-  "bootstrap_status": "installed"
+  "bootstrap_status": "installed",
+  "portability": {
+    "template_repository": "neohack2023/project-orath",
+    "template_revision": "340e69d2156229188208cb4c5c181da7525175e9",
+    "forbidden_source_terms": [
+      "Project Orath",
+      "project-orath",
+      "County Zero",
+      "Daggerfall"
+    ],
+    "allowed_provenance_paths": [
+      "devos/sync/receipts/REPOHARVESTER-DEVOS-BOOTSTRAP-20260913.json",
+      "devos/project.json"
+    ]
+  }
 }
