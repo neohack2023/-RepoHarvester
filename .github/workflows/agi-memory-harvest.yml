@@ -1,0 +1,97 @@
+name: AGI Memory Harvest Acceptance
+
+on:
+  push:
+    branches:
+      - harvest/agi-memory-python-01
+
+permissions:
+  contents: read
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    env:
+      REPOSITORY_URL: https://github.com/kdbhalala/agi-memory.git
+      REVISION: 3c93e9e52b4038578501e2bbe4c374476d6db34f
+      OUTPUT_SLUG: agi-memory-3c93e9e
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install RepoHarvester
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+
+      - name: Run focused Python tests
+        run: |
+          pytest -q \
+            tests/repoharvester/test_python_symbols.py \
+            tests/repoharvester/test_python_relationships.py \
+            tests/repoharvester/test_python_corpus.py \
+            tests/repoharvester/test_corpus.py
+
+      - name: Harvest agi-memory into RepoHarvester corpus
+        run: |
+          python scripts/run_corpus_harvest.py \
+            "$REPOSITORY_URL" \
+            --revision "$REVISION" \
+            --database acceptance/corpus/harvest.sqlite3 \
+            --output-dir "acceptance/corpus/$OUTPUT_SLUG"
+
+      - name: Verify stored Python code units
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from repoharvester.storage import SQLiteHarvestStore
+
+          database = Path("acceptance/corpus/harvest.sqlite3")
+          repo = "https://github.com/kdbhalala/agi-memory.git"
+          revision = "3c93e9e52b4038578501e2bbe4c374476d6db34f"
+          store = SQLiteHarvestStore(database)
+          records = store.query_records(source_repository=repo, source_revision=revision)
+          relationships = store.query_relationships(source_repository=repo, source_revision=revision)
+          symbols = [record for record in records if record.unit_kind.startswith("symbol:")]
+          python_symbols = [record for record in symbols if record.language == "Python"]
+          if not python_symbols:
+              raise SystemExit("harvest stored no Python symbol records")
+
+          payload = {
+              "database": str(database),
+              "source_repository": repo,
+              "source_revision": revision,
+              "record_count": len(records),
+              "python_symbol_count": len(python_symbols),
+              "relationship_count": len(relationships),
+              "sample_symbols": [
+                  {
+                      "path": record.path,
+                      "unit_kind": record.unit_kind,
+                      "symbol_name": record.symbol_name,
+                      "unit_identity": record.unit_identity,
+                      "representation_sha256": record.representation_sha256,
+                  }
+                  for record in python_symbols[:40]
+              ],
+          }
+          Path("acceptance/corpus/agi-memory-3c93e9e/DB_INSPECTION.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(payload, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload RepoHarvester database and receipts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: agi-memory-repoharvester-corpus
+          path: acceptance/corpus/
+          if-no-files-found: error
