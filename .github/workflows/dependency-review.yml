@@ -1,19 +1,16 @@
-# Dependency Review Action
+# Fork-safe dependency audit
 #
-# This Action will scan dependency manifest files that change as part of a Pull Request,
-# surfacing known-vulnerable versions of the packages declared or updated in the PR.
-# Once installed, if the workflow run is marked as required,
-# PRs introducing known-vulnerable packages will be blocked from merging.
-#
-# Source repository: https://github.com/actions/dependency-review-action
-name: 'Dependency Review'
+# GitHub's dependency-review API returns 403 when used against forks.
+# RepoHarvester intentionally remains a fork, so this workflow audits the
+# resolved Python dependency set directly instead of depending on that API.
+name: 'Dependency Audit'
 on: [pull_request]
 
 permissions:
   contents: read
 
 jobs:
-  dependency-review:
+  dependency-audit:
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -21,7 +18,99 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: 'Checkout Repository'
+      - name: Checkout Repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Record repository capability
+        shell: bash
+        run: |
+          echo "GitHub dependency review is intentionally bypassed for this fork." >> "$GITHUB_STEP_SUMMARY"
+          echo "repository=${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "fork=${{ github.event.repository.fork }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve project dependency set
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev,server]"
+          python -m pip freeze --exclude-editable | LC_ALL=C sort > dependency-resolution.txt
+
+      - name: Install pinned audit tool
+        run: python -m pip install "pip-audit==2.10.1"
+
+      - name: Audit resolved dependencies
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          python -m pip_audit \
+            --requirement dependency-resolution.txt \
+            --format json \
+            --output dependency-audit.json \
+            --progress-spinner off
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Write DevOS audit context
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_IS_FORK: ${{ github.event.repository.fork }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_TEST_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          AUDIT_EXIT_CODE: ${{ steps.audit.outputs.exit_code }}
+        run: |
+          python - <<'PY'
+          import json, os
+          payload = {
+              "contract": "DEVOS_FORK_SAFE_DEPENDENCY_AUDIT_V1",
+              "repository": os.environ["REPOSITORY"],
+              "repository_is_fork": os.environ["REPOSITORY_IS_FORK"].lower() == "true",
+              "candidate_sha": os.environ["CANDIDATE_SHA"],
+              "merge_test_sha": os.environ["MERGE_TEST_SHA"],
+              "base_sha": os.environ["BASE_SHA"],
+              "base_ref": os.environ["BASE_REF"],
+              "head_ref": os.environ["HEAD_REF"],
+              "tool": "pip-audit",
+              "tool_version": "2.10.1",
+              "audit_exit_code": int(os.environ["AUDIT_EXIT_CODE"]),
+              "github_dependency_review": "UNSUPPORTED_FORK",
+          }
+          with open("dependency-audit-context.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, sort_keys=True, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Upload dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dependency-audit-${{ github.event.pull_request.head.sha }}
+          path: |
+            dependency-resolution.txt
+            dependency-audit.json
+            dependency-audit-context.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce audit result
+        if: always()
+        shell: bash
+        env:
+          AUDIT_EXIT_CODE: ${{ steps.audit.outputs.exit_code }}
+        run: |
+          if [ "${AUDIT_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "Dependency audit found a vulnerability or audit failure." >&2
+            exit 1
+          fi
+          echo "Dependency audit passed." >> "$GITHUB_STEP_SUMMARY"
