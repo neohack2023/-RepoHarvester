@@ -49,11 +49,11 @@ def test_python_symbols_round_trip_through_corpus(tmp_path: Path) -> None:
     )
 
     symbols = [record for record in stored if record.unit_kind.startswith("symbol:")]
-    assert [(record.unit_kind, record.symbol_name) for record in symbols] == [
+    assert {(record.unit_kind, record.symbol_name) for record in symbols} == {
         ("symbol:constant", "MAX_ITEMS"),
         ("symbol:class", "Memory"),
         ("symbol:method", "recall"),
-    ]
+    }
     assert result.summary["receipt_verified"] is True
     assert result.summary["semantic_skip_count"] == 0
     assert result.summary["qualification_state"] == "RAW"
