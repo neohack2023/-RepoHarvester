@@ -12,6 +12,8 @@ from gitingest.schemas import IngestionQuery
 from repoharvester.dependencies import build_declared_dependency_records
 from repoharvester.licenses import build_repository_license_records
 from repoharvester.models import HarvestRecord, HarvestRelationship, QualificationState
+from repoharvester.python_relationships import build_python_relationships
+from repoharvester.python_symbols import PythonParseError, build_python_symbol_records
 from repoharvester.receipts import ExtractionReceipt, build_extraction_receipt, verify_extraction_receipt
 from repoharvester.records import build_file_harvest_records
 from repoharvester.relationships import build_typescript_relationships
@@ -34,6 +36,7 @@ class _RecordBuildResult:
     records: tuple[HarvestRecord, ...]
     warnings: tuple[str, ...]
     skipped_typescript_paths: tuple[str, ...]
+    skipped_python_paths: tuple[str, ...]
 
 
 def _record_identity(record: HarvestRecord) -> tuple[str, str, str, str, str]:
@@ -51,6 +54,7 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
     symbol_records: list[HarvestRecord] = []
     warnings: list[str] = []
     skipped_typescript_paths: list[str] = []
+    skipped_python_paths: list[str] = []
 
     for file_record in file_records:
         try:
@@ -61,6 +65,14 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
                 f"semantic-extraction-skipped:{file_record.path}:typescript-parse-error"
             )
 
+        try:
+            symbol_records.extend(build_python_symbol_records(file_record))
+        except PythonParseError:
+            skipped_python_paths.append(file_record.path)
+            warnings.append(
+                f"semantic-extraction-skipped:{file_record.path}:python-parse-error"
+            )
+
     license_records = build_repository_license_records(file_records)
     dependency_records = build_declared_dependency_records(file_records)
     records = tuple((*file_records, *symbol_records, *license_records, *dependency_records))
@@ -68,6 +80,7 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
         records=records,
         warnings=tuple(sorted(warnings)),
         skipped_typescript_paths=tuple(sorted(skipped_typescript_paths)),
+        skipped_python_paths=tuple(sorted(skipped_python_paths)),
     )
 
 
@@ -82,17 +95,42 @@ def harvest_into_corpus(
 
     This operation is deliberately qualification-neutral. Every newly harvested
     record must remain RAW. Existing records for other repositories/revisions in
-    the database are preserved. Unsupported TypeScript syntax degrades semantic
-    coverage for the affected files only; file/provenance evidence is retained
-    and the omission is bound into the extraction receipt as an explicit warning.
+    the database are preserved. Unsupported TypeScript or Python syntax degrades
+    semantic coverage for the affected files only; file/provenance evidence is
+    retained and the omission is bound into the extraction receipt as an explicit
+    warning.
     """
 
     build_result = _build_records(query)
     records = build_result.records
     relationships = tuple(
-        build_typescript_relationships(
-            records,
-            skip_source_paths=build_result.skipped_typescript_paths,
+        sorted(
+            (
+                *build_typescript_relationships(
+                    records,
+                    skip_source_paths=build_result.skipped_typescript_paths,
+                ),
+                *build_python_relationships(
+                    records,
+                    skip_source_paths=build_result.skipped_python_paths,
+                ),
+            ),
+            key=lambda item: (
+                item.source_repository,
+                item.source_revision,
+                item.source_path,
+                item.source_unit_kind,
+                item.source_unit_identity,
+                item.relationship_kind,
+                item.target_path,
+                item.target_unit_kind,
+                item.target_unit_identity,
+                item.literal_target,
+                item.start_byte if item.start_byte is not None else -1,
+                item.end_byte if item.end_byte is not None else -1,
+                item.start_row if item.start_row is not None else -1,
+                item.start_column if item.start_column is not None else -1,
+            ),
         )
     )
 
@@ -135,6 +173,9 @@ def harvest_into_corpus(
     languages = Counter(record.language or "unknown" for record in records)
     relationship_kinds = Counter(item.relationship_kind for item in relationships)
     resolution_states = Counter(item.resolution_state.value for item in relationships)
+    skipped_semantic_paths = sorted(
+        (*build_result.skipped_typescript_paths, *build_result.skipped_python_paths)
+    )
 
     summary: dict[str, object] = {
         "source_repository": query.url,
@@ -149,8 +190,8 @@ def harvest_into_corpus(
         "relationship_manifest_sha256": receipt.relationship_manifest_sha256,
         "receipt_verified": True,
         "warnings": list(receipt.warnings),
-        "semantic_skip_count": len(build_result.skipped_typescript_paths),
-        "semantic_skipped_paths": list(build_result.skipped_typescript_paths),
+        "semantic_skip_count": len(skipped_semantic_paths),
+        "semantic_skipped_paths": skipped_semantic_paths,
         "qualification_state": "RAW",
         "qualification_performed": False,
         "corpus_database": str(Path(database_path)),
