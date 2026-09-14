@@ -8,6 +8,7 @@ import hashlib
 from repoharvester.models import HarvestRecord
 
 PYTHON_SYMBOL_RULESET = "python-ast-symbol-v1"
+_EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 
 
 class PythonParseError(ValueError):
@@ -19,7 +20,7 @@ def build_python_symbol_records(file_record: HarvestRecord) -> list[HarvestRecor
     if file_record.unit_kind != "file" or file_record.language != "Python":
         return []
 
-    source = file_record.representation
+    source = "" if file_record.source_sha256 == _EMPTY_SHA256 else file_record.representation
     source_bytes = source.encode("utf-8")
     try:
         tree = ast.parse(source, filename=file_record.path)
