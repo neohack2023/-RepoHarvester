@@ -63,7 +63,9 @@ jobs:
         env:
           REPOSITORY: ${{ github.repository }}
           REPOSITORY_IS_FORK: ${{ github.event.repository.fork }}
-          COMMIT_SHA: ${{ github.sha }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_TEST_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
           AUDIT_EXIT_CODE: ${{ steps.audit.outputs.exit_code }}
@@ -74,7 +76,9 @@ jobs:
               "contract": "DEVOS_FORK_SAFE_DEPENDENCY_AUDIT_V1",
               "repository": os.environ["REPOSITORY"],
               "repository_is_fork": os.environ["REPOSITORY_IS_FORK"].lower() == "true",
-              "commit_sha": os.environ["COMMIT_SHA"],
+              "candidate_sha": os.environ["CANDIDATE_SHA"],
+              "merge_test_sha": os.environ["MERGE_TEST_SHA"],
+              "base_sha": os.environ["BASE_SHA"],
               "base_ref": os.environ["BASE_REF"],
               "head_ref": os.environ["HEAD_REF"],
               "tool": "pip-audit",
@@ -91,7 +95,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: dependency-audit-${{ github.sha }}
+          name: dependency-audit-${{ github.event.pull_request.head.sha }}
           path: |
             dependency-resolution.txt
             dependency-audit.json
