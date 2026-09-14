@@ -75,7 +75,12 @@ def _build_records(query: IngestionQuery) -> _RecordBuildResult:
 
     license_records = build_repository_license_records(file_records)
     dependency_records = build_declared_dependency_records(file_records)
-    records = tuple((*file_records, *symbol_records, *license_records, *dependency_records))
+    records = tuple(
+        sorted(
+            (*file_records, *symbol_records, *license_records, *dependency_records),
+            key=_record_identity,
+        )
+    )
     return _RecordBuildResult(
         records=records,
         warnings=tuple(sorted(warnings)),
@@ -119,17 +124,12 @@ def harvest_into_corpus(
                 item.source_repository,
                 item.source_revision,
                 item.source_path,
-                item.source_unit_kind,
-                item.source_unit_identity,
                 item.relationship_kind,
                 item.target_path,
-                item.target_unit_kind,
                 item.target_unit_identity,
                 item.literal_target,
                 item.start_byte if item.start_byte is not None else -1,
                 item.end_byte if item.end_byte is not None else -1,
-                item.start_row if item.start_row is not None else -1,
-                item.start_column if item.start_column is not None else -1,
             ),
         )
     )
@@ -166,8 +166,8 @@ def harvest_into_corpus(
         raise RuntimeError("SQLite corpus record round-trip mismatch")
     if stored_relationship_count != len(relationships) or reloaded_relationships != list(relationships):
         raise RuntimeError("SQLite corpus relationship round-trip mismatch")
-    if sorted(map(_record_identity, reloaded)) != sorted(map(_record_identity, records)):
-        raise RuntimeError("SQLite corpus identities differ from harvested identities")
+    if reloaded != list(records):
+        raise RuntimeError("SQLite corpus records differ from harvested records")
 
     unit_kinds = Counter(record.unit_kind for record in records)
     languages = Counter(record.language or "unknown" for record in records)
