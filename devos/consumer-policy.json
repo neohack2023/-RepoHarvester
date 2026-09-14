@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "repository": "neohack2023/-RepoHarvester",
+  "target_branch": "main",
+  "github_authority_mode": "OWNER_VALIDATED_UNPROTECTED",
+  "branch_protection_required": false,
+  "branch_protection_exception": {
+    "approved": true,
+    "source": "repository-owner-chat-authorization",
+    "scope": "neohack2023/-RepoHarvester main",
+    "reason": "Repository owner explicitly accepts operating without branch protection when exact-head validation is used.",
+    "does_not_generalize": true
+  },
+  "required_compensating_controls": {
+    "exact_head_ci_required": true,
+    "devos_consumer_validation_required": true,
+    "existing_repo_devos_validation_required": true,
+    "checkpoint_after_green_validation": true,
+    "force_push_forbidden": true,
+    "remote_authority_receipt_claim_forbidden_without_protected_policy": true
+  },
+  "portable_github_authority_adapter": {
+    "enabled_for_remote_promotion": false,
+    "reason": "Portable core remains fail-closed on unprotected branches; this host-level exception permits owner-managed promotion only."
+  }
+}
