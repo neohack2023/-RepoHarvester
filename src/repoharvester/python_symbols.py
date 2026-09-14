@@ -31,12 +31,17 @@ def build_python_symbol_records(file_record: HarvestRecord) -> list[HarvestRecor
     line_offsets = _line_offsets(source_bytes)
     records: list[HarvestRecord] = []
 
-    def collect(body: list[ast.stmt], parent: str | None = None) -> None:
+    def collect(
+        body: list[ast.stmt],
+        parent: str | None = None,
+        *,
+        parent_is_class: bool = False,
+    ) -> None:
         for node in body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 name = node.name
                 qualified = f"{parent}.{name}" if parent else name
-                kind = "method" if parent else "function"
+                kind = "method" if parent_is_class else "function"
                 records.append(
                     _record_for_node(
                         node,
@@ -48,7 +53,7 @@ def build_python_symbol_records(file_record: HarvestRecord) -> list[HarvestRecor
                         file_record=file_record,
                     )
                 )
-                collect(node.body, qualified)
+                collect(node.body, qualified, parent_is_class=False)
                 continue
 
             if isinstance(node, ast.ClassDef):
@@ -65,7 +70,7 @@ def build_python_symbol_records(file_record: HarvestRecord) -> list[HarvestRecor
                         file_record=file_record,
                     )
                 )
-                collect(node.body, qualified)
+                collect(node.body, qualified, parent_is_class=True)
                 continue
 
             if parent is None:
@@ -83,7 +88,13 @@ def build_python_symbol_records(file_record: HarvestRecord) -> list[HarvestRecor
                     )
 
     collect(tree.body)
-    return sorted(records, key=lambda record: (record.start_byte or -1, record.unit_identity))
+    return sorted(
+        records,
+        key=lambda record: (
+            record.start_byte if record.start_byte is not None else -1,
+            record.unit_identity,
+        ),
+    )
 
 
 def _module_constant_names(node: ast.stmt) -> tuple[str, ...]:
@@ -117,10 +128,7 @@ def _record_for_node(
     end_byte = _absolute_offset(line_offsets, end_line, end_column)
     representation_bytes = source[start_byte:end_byte]
     representation = representation_bytes.decode("utf-8")
-    unit_identity = (
-        f"python:{symbol_kind}:{qualified_name}:"
-        f"{start_byte}:{end_byte}"
-    )
+    unit_identity = f"python:{symbol_kind}:{qualified_name}:{start_byte}:{end_byte}"
     tags = tuple(sorted(set(file_record.tags) | {"unit:symbol", f"symbol:{symbol_kind}"}))
 
     return HarvestRecord(
@@ -152,7 +160,7 @@ def _node_start(node: ast.AST) -> tuple[int, int]:
     if decorators:
         first = min(decorators, key=lambda item: (item.lineno, item.col_offset))
         if first.lineno < line:
-            return first.lineno, first.col_offset
+            return first.lineno, 0
     return line, column
 
 
