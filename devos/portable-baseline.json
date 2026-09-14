@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "adoption_id": "REPOHARVESTER_LIVE_ADOPTION_01",
+  "adoption_mode": "LIVE_CONSUMER_BRIDGE",
+  "upstream_repository": "neohack2023/Dev-os",
+  "upstream_revision": "9a5364c208285261c2ca692c285fbfd651299548",
+  "upstream_version": "0.12.0",
+  "portable_schema_version": 8,
+  "consumer_root": "devos",
+  "canonical_distribution_root": "Devos",
+  "root_casing_deviation": "Preserve RepoHarvester's established lowercase devos/ path because existing validated tooling is path-bound; portable runtime code itself is root-name agnostic.",
+  "installed_portable_components": [
+    "runtime/db_runtime.py",
+    "schemas/runtime-db-v1.sql",
+    "schemas/runtime-db-v2.sql",
+    "schemas/runtime-db-v3.sql",
+    "schemas/runtime-db-v4.sql",
+    "schemas/runtime-db-v5.sql",
+    "schemas/runtime-db-v6.sql",
+    "schemas/runtime-db-v7.sql",
+    "schemas/runtime-db-v8.sql"
+  ],
+  "upstream_git_blobs": {
+    "runtime/db_runtime.py": "5432d21b130768aa7ec09646119e14ddc47f4e79",
+    "schemas/runtime-db-v1.sql": "2d7bc2306050b6bca3acdbcb512eb3a3ee1e70c7",
+    "schemas/runtime-db-v2.sql": "26391516b0cfd727d7a0e05d9dc5abf010a1040d",
+    "schemas/runtime-db-v3.sql": "0de55ac991dd67edb6c2578375d83b0d7887c69e",
+    "schemas/runtime-db-v4.sql": "c8bab8a3092577be02c254234ec6ecda814cfa40",
+    "schemas/runtime-db-v5.sql": "060969b30b40bbe38f647de422573bf21e396257",
+    "schemas/runtime-db-v6.sql": "1849cc6de625e2e986e24a2349b7268361520b9e",
+    "schemas/runtime-db-v7.sql": "7d77715c0cd04145340b4f6ff5dcac3698db297f",
+    "schemas/runtime-db-v8.sql": "56dcf7a70a6428c85bd1f0f3b9765c2dc1a5865b"
+  },
+  "legacy_runtime": {
+    "status": "PRESERVED_AND_ACTIVE",
+    "entrypoints": [
+      "tools/validate_devos.py",
+      "tools/build_knowledge_db.py",
+      "tools/knowledge_runtime.py",
+      "tools/evidence_runtime.py",
+      "tools/reflection_core.py",
+      "tools/learning_store.py"
+    ]
+  },
+  "promotion_state": "CONSUMER_VALIDATION",
+  "authority_effect": "NONE"
+}
