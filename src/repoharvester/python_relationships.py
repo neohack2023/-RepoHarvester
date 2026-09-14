@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import posixpath
 from collections import defaultdict
 from typing import Iterable
@@ -12,6 +13,7 @@ from repoharvester.models import HarvestRecord, HarvestRelationship, ResolutionS
 PYTHON_RELATIONSHIP_RULESET = "python-ast-relationships-v1"
 EXTRACTOR_NAME = "python-stdlib-ast"
 EXTRACTOR_VERSION = "1"
+_EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 
 
 def build_python_relationships(
@@ -68,8 +70,9 @@ def _import_relationships(
     files_by_path: dict[str, HarvestRecord],
     module_paths: dict[str, str],
 ) -> list[HarvestRelationship]:
+    source = "" if file_record.source_sha256 == _EMPTY_SHA256 else file_record.representation
     try:
-        tree = ast.parse(file_record.representation, filename=file_record.path)
+        tree = ast.parse(source, filename=file_record.path)
     except SyntaxError as exc:
         raise ValueError(
             f"cannot deterministically extract relationships from parse-error file: {file_record.path}"
