@@ -2,12 +2,15 @@
 
 ## Status
 
-CHECKPOINT REACHED as a validated implementation candidate. Promotion to `main` remains gated on repository-wide PR validation.
+COMPLETE. The deterministic Python harvest slice was promoted to `main` through PR #27.
 
 ## Source and implementation binding
 
 - RepoHarvester base before this slice: `4fe357303098aa669deb8aed6144580c9d7abb34`
 - validated implementation candidate: `eb78d102e9a36ee4a78a3fb16aa7451c08128ce6`
+- final PR head: `4d2b4eea0f4407a83f690a73d71bee9fcc9ef4b7`
+- main promotion commit: `d08afe61083968be1e656624b38cd9cf49b23f69`
+- pull request: `#27`
 - external target: `https://github.com/kdbhalala/agi-memory.git`
 - exact target revision: `3c93e9e52b4038578501e2bbe4c374476d6db34f`
 - source repository was not modified by harvesting
@@ -48,7 +51,7 @@ Empty source files are normalized from their source SHA-256 rather than trusting
 
 ## Validation
 
-GitHub Actions acceptance run: `34868649174`
+Target acceptance run: `34868649174`
 
 Focused tests:
 
@@ -61,6 +64,19 @@ Focused tests:
 Result: `8 passed`.
 
 The acceptance workflow then executed RepoHarvester's existing `scripts/run_corpus_harvest.py` against the pinned external repository and reopened the resulting database through `SQLiteHarvestStore`.
+
+PR #27 promotion gates that passed on the final code head included:
+
+- External Acceptance
+- Corpus Harvest Smoke
+- Dependency Audit
+- CodeQL
+- DevOS checks
+- DevOS Live Adoption
+- PR conventional-commit validation
+- GHCR container build
+
+The inherited broad CI matrix also reran. Its five remaining failures reproduce across multiple operating systems and are confined to live-network query-parser fixtures: a Bitbucket repository now requires credentials and `gitlab.alpinelinux.org/alpine/apk-tools` returns HTTP 418. All RepoHarvester Python harvest tests pass in those same jobs. PR #27 records this as `EXTERNAL_TEST_HOST_UNAVAILABLE`; no unrelated query-parser workaround was added to this bounded slice.
 
 ## Corpus result
 
@@ -117,4 +133,4 @@ RepoHarvester's declared-dependency evidence currently handles root `package.jso
 
 ## Next gate
 
-After repository-wide validation and main promotion of Python extraction, the smallest useful follow-up is `PYPROJECT_DEPENDENCY_EVIDENCE_01` if qualification of Python code units is required. Otherwise, keep the stored `agi-memory` corpus RAW and use it for evidence-backed comparison/retrieval only.
+The smallest useful follow-up is `PYPROJECT_DEPENDENCY_EVIDENCE_01` if qualification of Python code units is required. Otherwise, keep the stored `agi-memory` corpus RAW and use it for evidence-backed comparison/retrieval only.
