@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "distribution_repository": "neohack2023/Dev-os",
+  "distribution_version": "0.12.0",
+  "distribution_revision": "9a5364c208285261c2ca692c285fbfd651299548",
+  "consumer_repository": "neohack2023/-RepoHarvester",
+  "consumer_root": "devos",
+  "compatibility_note": "RepoHarvester preserves lowercase devos/ because established repository tooling resolves this path explicitly. Portable runtime code is path-name agnostic.",
+  "governance_exception": {
+    "branch_protection_required": false,
+    "accepted_by_owner": true,
+    "condition": "Exact-head validation and project CI remain required before promotion to main.",
+    "scope": "RepoHarvester consumer adoption only; this does not weaken DevOS core GitHub authority policy."
+  }
+}
