@@ -2,7 +2,7 @@
 
 ## Status
 
-Candidate implementation for RepoHarvester's fork-safe dependency audit.
+COMPLETE candidate, pending final exact-head promotion to `main`.
 
 ## Root cause
 
@@ -20,9 +20,37 @@ The replacement workflow:
 4. captures the concrete resolved environment in `dependency-resolution.txt`;
 5. audits that resolution with pinned `pip-audit==2.10.1`;
 6. emits machine-readable `dependency-audit.json` plus `dependency-audit-context.json`;
-7. uploads the evidence as an immutable GitHub Actions artifact;
-8. fails only when the independent audit reports a vulnerability or cannot complete.
+7. binds evidence to both the exact candidate SHA and GitHub's merge-test SHA;
+8. uploads the evidence as an immutable GitHub Actions artifact;
+9. fails only when the independent audit reports a vulnerability or cannot complete.
+
+## Validation evidence
+
+Validated candidate before checkpoint sealing:
+
+- candidate SHA: `ae79ffc2fb6ad112b3a7ac71b303332e107c1100`
+- base SHA: `214b3b9b9fc2af4d03bf7265baac3cb55b845fbc`
+- merge-test SHA: `8d3177aeebb53772e6b3ea21d256bd3db350d6d3`
+- Dependency Audit run: `34795205445`
+- Dependency Audit job: `103826822960`
+- audit tool: `pip-audit==2.10.1`
+- resolved dependencies audited: `82`
+- known vulnerabilities returned: `0`
+- audit exit code: `0`
+- evidence artifact ID: `10328983689`
+- artifact digest: `sha256:8562ec292d1d65843db444bb144d241d8d1e3f3586fa287211a52d5e1bcf51bb`
+- artifact name: `dependency-audit-ae79ffc2fb6ad112b3a7ac71b303332e107c1100`
+
+Companion gates on the same candidate also passed:
+
+- DevOS checks: `34795205415`
+- DevOS Live Adoption: `34795205346`
+- External Acceptance: `34795205369`
+- Corpus Harvest Smoke: `34795205353`
+- PR Conventional Commit Validation: `34795205335`
 
 ## Authority
 
-This checkpoint does not declare the slice complete until the exact candidate SHA passes the replacement audit and the existing RepoHarvester validation gates. Promotion remains bounded by exact-head validation. Branch protection remains intentionally optional for this consumer repository per owner policy.
+This checkpoint records accepted evidence but does not itself authorize durable promotion. The checkpoint-sealing commit must pass the replacement dependency audit and RepoHarvester validation gates again before PR #25 may merge.
+
+Branch protection remains intentionally optional for this consumer repository per owner policy. Exact-head validation remains the promotion gate.
