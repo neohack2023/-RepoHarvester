@@ -129,3 +129,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 python_classes = "Test*"
 python_functions = "test_*"
+markers = [
+    "live_network: exercises real external Git hosts and may fail because of provider availability or policy",
+    "corpus_integrity: deterministic shared-corpus persistence and round-trip contract tests",
+]

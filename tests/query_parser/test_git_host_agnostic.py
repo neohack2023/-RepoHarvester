@@ -1,7 +1,8 @@
-"""Tests to verify that the query parser is Git host agnostic.
+"""Live tests to verify that the query parser is Git host agnostic.
 
 These tests confirm that ``parse_query`` correctly identifies user/repo pairs and canonical URLs for GitHub, GitLab,
-Bitbucket, Gitea, and Codeberg, even if the host is omitted.
+Bitbucket, Gitea, and Codeberg, even if the host is omitted. They intentionally contact real external Git hosts and
+therefore belong to the live-network lane rather than deterministic pull-request CI.
 """
 
 from __future__ import annotations
@@ -11,6 +12,8 @@ import pytest
 from gitingest.config import MAX_FILE_SIZE
 from gitingest.query_parser import parse_remote_repo
 from gitingest.utils.query_parser_utils import KNOWN_GIT_HOSTS, _is_valid_git_commit_hash
+
+pytestmark = pytest.mark.live_network
 
 # Repository matrix: (host, user, repo)
 _REPOS: list[tuple[str, str, str]] = [

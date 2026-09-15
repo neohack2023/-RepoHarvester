@@ -6,11 +6,14 @@ from pathlib import Path
 from uuid import uuid4
 
 import git
+import pytest
 
 from gitingest.schemas import IngestionQuery
 from repoharvester.corpus import harvest_into_corpus
-from repoharvester.models import QualificationState
+from repoharvester.models import HarvestRecord, QualificationState
 from repoharvester.storage import SQLiteHarvestStore
+
+pytestmark = pytest.mark.corpus_integrity
 
 
 def _fixture_query(
@@ -53,6 +56,11 @@ def _fixture_query(
     )
 
 
+def _record_storage_key(record: HarvestRecord) -> tuple[str, str, str]:
+    """Mirror the record-identity portion of SQLite's deterministic query order."""
+    return (record.path, record.unit_kind, record.unit_identity)
+
+
 def test_shared_corpus_preserves_multiple_repositories(tmp_path: Path) -> None:
     database = tmp_path / "corpus.sqlite3"
     first = _fixture_query(
@@ -73,8 +81,8 @@ def test_shared_corpus_preserves_multiple_repositories(tmp_path: Path) -> None:
     stored_first = store.query_records(source_repository=first.url, source_revision=first.commit)
     stored_second = store.query_records(source_repository=second.url, source_revision=second.commit)
 
-    assert stored_first == list(first_result.records)
-    assert stored_second == list(second_result.records)
+    assert stored_first == sorted(first_result.records, key=_record_storage_key)
+    assert stored_second == sorted(second_result.records, key=_record_storage_key)
     assert all(record.qualification_state == QualificationState.RAW for record in stored_first)
     assert all(record.qualification_state == QualificationState.RAW for record in stored_second)
     assert first_result.summary["qualification_performed"] is False
